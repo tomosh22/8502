@@ -58,7 +58,7 @@ void Mesh::Draw()	{
 		glUnmapBuffer(GL_ARRAY_BUFFER);
 		glDrawArrays(type, 0, numVertices);
 	}
-	glBindVertexArray(0);	
+	glBindVertexArray(0);
 }
 
 void Mesh::DrawSubMesh(int i) {
