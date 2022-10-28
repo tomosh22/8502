@@ -13,9 +13,11 @@ public:
 protected:
     Shader* shader;
     Mesh* triangle;
-    GLuint texture;
+    GLuint texture0;
     bool filtering;
     bool repeating;
-    GLuint textureHandle;
+    GLuint64 textureHandle0;
+    GLuint texture1;
+    GLuint64 textureHandle1;
 };
 
