@@ -1,9 +1,14 @@
 #include "SceneNode.h"
-SceneNode::SceneNode(Mesh* mesh, Vector4 colour) {
+SceneNode::SceneNode(GLuint64 textureHandle,Mesh* mesh, Vector4 colour) {
+	std::cout << "this should be called\n";
 	this->mesh = mesh;
 	this->colour = colour;
+	this->textureHandle = textureHandle;
 	parent = NULL;
 	modelScale = Vector3(1, 1, 1);
+	boundingRadius = 1.0f;
+	distanceFromCamera = 0.0f;
+	texture = 0;
 }
 
 SceneNode::~SceneNode(void) {
@@ -18,6 +23,7 @@ void SceneNode::AddChild(SceneNode* s) {
 }
 
 void SceneNode::Draw(const OGLRenderer& r) {
+	
 	if (mesh)mesh->Draw();
 }
 

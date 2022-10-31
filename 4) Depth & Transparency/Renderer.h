@@ -12,8 +12,10 @@ public:
     void ToggleAlphaBlend();
     void ToggleBlendMode();
     void MoveObject(float by);
+    void UpdateScene(float dt);
 protected:
-    GLuint textures[2];
+    GLuint textures[3];
+    GLuint64 textureHandles[3];
     Mesh* meshes[2];
     Shader* shader;
     Vector3 positions[2];
@@ -21,5 +23,6 @@ protected:
     bool usingDepth;
     bool usingAlpha;
     int blendMode;
+    float time;
 };
 

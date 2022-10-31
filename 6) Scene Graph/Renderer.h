@@ -3,6 +3,8 @@
 #include "../nclgl/Camera.h"
 #include "../nclgl/SceneNode.h"
 #include "../nclgl/CubeRobot.h"
+#include <map>
+#include <string>
 class Renderer :
     public OGLRenderer
 {
@@ -18,5 +20,12 @@ protected:
     Camera* camera;
     Mesh* cube;
     Shader* shader;
+    GLuint texture0;
+    GLuint64 textureHandle0;
+    GLuint texture1;
+    GLuint64 textureHandle1;
+    GLuint texture2;
+    GLuint64 textureHandle2;
+    std::map<std::string, GLuint64> textures;
 };
 

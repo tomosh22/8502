@@ -32,7 +32,7 @@ int main()	{
 		if(Window::GetKeyboard()->KeyDown(KEYBOARD_DOWN)) {
 			renderer.MoveObject(-0.1f);
 		}
-
+		renderer.UpdateScene(w.GetTimer()->GetTimeDeltaSeconds());
 		renderer.RenderScene();
 		renderer.SwapBuffers();
 		if (Window::GetKeyboard()->KeyDown(KEYBOARD_F5)) {
