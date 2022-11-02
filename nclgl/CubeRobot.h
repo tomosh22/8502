@@ -6,7 +6,7 @@ class CubeRobot :
     public SceneNode
 {
 public:
-    CubeRobot(Mesh* cube, std::map<std::string,GLuint64> textures);
+    CubeRobot(Mesh* cube);
     ~CubeRobot(void) {};
     void Update(float dt) override;
 protected:

@@ -26,10 +26,10 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	textures.insert({ "glass",textureHandle1 });
 	textures.insert({ "doge",textureHandle2 });
 	
-	root = new SceneNode(textureHandle0,(Mesh*)NULL,Vector4(1,1,1,1));
+	root = new SceneNode((Mesh*)NULL,Vector4(1,1,1,1));
 	
 	
-	root->AddChild(new CubeRobot(cube,textures));
+	root->AddChild(new CubeRobot(cube));
 	std::cout << "after\n";
 
 	glEnable(GL_DEPTH_TEST);
@@ -63,7 +63,7 @@ void Renderer::DrawNode(SceneNode* n) {
 		glUniformMatrix4fv(glGetUniformLocation(shader->GetProgram(), "modelMatrix"), 1, false, model.values);
 		glUniform4fv(glGetUniformLocation(shader->GetProgram(), "nodeColour"), 1, (float*)&n->GetColour());
 		glUniform1i(glGetUniformLocation(shader->GetProgram(), "useTexture"), 1);
-		glUniformHandleui64ARB(glGetUniformLocation(this->shader->GetProgram(), "diffuseTex"), n->textureHandle);
+		//glUniformHandleui64ARB(glGetUniformLocation(this->shader->GetProgram(), "diffuseTex"));
 		n->Draw(*this);
 	}
 	for (vector<SceneNode*>::const_iterator i = n->GetChildIteratorStart(); i != n->GetChildIteratorEnd(); i++) {

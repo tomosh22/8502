@@ -1,9 +1,7 @@
 #include "SceneNode.h"
-SceneNode::SceneNode(GLuint64 textureHandle,Mesh* mesh, Vector4 colour) {
-	std::cout << "this should be called\n";
+SceneNode::SceneNode(Mesh* mesh, Vector4 colour) {
 	this->mesh = mesh;
 	this->colour = colour;
-	this->textureHandle = textureHandle;
 	parent = NULL;
 	modelScale = Vector3(1, 1, 1);
 	boundingRadius = 1.0f;

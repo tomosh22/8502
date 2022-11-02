@@ -1,35 +1,39 @@
 #include "CubeRobot.h"
-CubeRobot::CubeRobot(Mesh* cube, std::map<std::string, GLuint64> textures) {
-	std::cout << "before\n";
-	SceneNode* body = new SceneNode(textures.at("doge"),cube, Vector4(1, 0, 0, 1));
-	
+CubeRobot::CubeRobot(Mesh* cube) {
+	SceneNode* body = new SceneNode(cube, Vector4(1, 0, 0, 1));
 	body->SetModelScale(Vector3(10, 15, 5));
 	body->SetTransform(Matrix4::Translation(Vector3(0,35,0)));
+	body->SetBoundingRadius(15.0f);
 	AddChild(body);
 
-	head = new SceneNode(textures.at("doge"), cube, Vector4(0, 1, 0, 1));
+	head = new SceneNode(cube, Vector4(0, 1, 0, 1));
 	head->SetModelScale(Vector3(5, 5, 5));
 	head->SetTransform(Matrix4::Translation(Vector3(0, 30, 0)));
+	head->SetBoundingRadius(5.0f);
 	body->AddChild(head);
 
-	leftArm = new SceneNode(textures.at("stone"), cube, Vector4(0, 0, 1, 1));
+	leftArm = new SceneNode(cube, Vector4(0, 0, 1, 1));
 	leftArm->SetModelScale(Vector3(3, -18, 3));
 	leftArm->SetTransform(Matrix4::Translation(Vector3(-12, 30, -1)));
+	leftArm->SetBoundingRadius(18.0f);
 	body->AddChild(leftArm);
 
-	rightArm = new SceneNode(textures.at("stone"), cube, Vector4(0, 0, 1, 1));
+	rightArm = new SceneNode(cube, Vector4(0, 0, 1, 1));
 	rightArm->SetModelScale(Vector3(3, -18, 3));
 	rightArm->SetTransform(Matrix4::Translation(Vector3(12, 30, -1)));
+	rightArm->SetBoundingRadius(18.0f);
 	body->AddChild(rightArm);
 
-	SceneNode* leftLeg = new SceneNode(textures.at("stone"), cube, Vector4(0, 0, 1, 1));
+	SceneNode* leftLeg = new SceneNode(cube, Vector4(0, 0, 1, 1));
 	leftLeg->SetModelScale(Vector3(3, -17.5, 3));
 	leftLeg->SetTransform(Matrix4::Translation(Vector3(-8, 0, 0)));
+	leftLeg->SetBoundingRadius(18.0f);
 	body->AddChild(leftLeg);
 
-	SceneNode* rightLeg = new SceneNode(textures.at("stone"), cube, Vector4(0, 0, 1, 1));
+	SceneNode* rightLeg = new SceneNode(cube, Vector4(0, 0, 1, 1));
 	rightLeg->SetModelScale(Vector3(3, -17.5, 3));
 	rightLeg->SetTransform(Matrix4::Translation(Vector3(8, 0, 0)));
+	rightLeg->SetBoundingRadius(18.0f);
 	body->AddChild(rightLeg);
 
 }

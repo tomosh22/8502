@@ -7,10 +7,7 @@
 class SceneNode
 {
 public:
-	SceneNode() {
-		mesh = NULL;
-	};
-	SceneNode(GLuint64 textureHandle, Mesh* m, Vector4 colour);
+	SceneNode(Mesh* m = NULL, Vector4 colour = Vector4(1, 1, 1, 1));
 	~SceneNode(void);
 
 	void SetTransform(const Matrix4& matrix) { transform = matrix; }
@@ -32,7 +29,6 @@ public:
 
 	std::vector<SceneNode*>::const_iterator GetChildIteratorStart() { return children.begin(); }
 	std::vector<SceneNode*>::const_iterator GetChildIteratorEnd() { return children.end(); }
-	GLuint64 textureHandle;
 
 	float GetBoundingRadius() const { return boundingRadius; }
 	void SetBoundingRadius(float f) { boundingRadius = f; }
