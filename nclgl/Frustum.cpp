@@ -18,5 +18,5 @@ void Frustum::FromMatrix(const Matrix4& mat) {
 	planes[2] = Plane(wAxis + yAxis, mat.values[15] + mat.values[13],true);
 	planes[3] = Plane(wAxis - yAxis, mat.values[15] - mat.values[13],true);
 	planes[4] = Plane(wAxis + zAxis, mat.values[15] + mat.values[14],true);
-	planes[4] = Plane(wAxis - zAxis, mat.values[15] - mat.values[14],true);
+	planes[5] = Plane(wAxis - zAxis, mat.values[15] - mat.values[14],true);
 }

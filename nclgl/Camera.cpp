@@ -35,6 +35,7 @@ void Camera::UpdateCamera(float dt) {
 			roll -= 360.0f;
 		}
 	}
+	//roll = 0;
 }
 
 Matrix4 Camera::BuildViewMatrix() {

@@ -15,6 +15,7 @@ public:
 		this->pitch = pitch;
 		this->yaw = yaw;
 		this->position = position;
+		this->roll = 0;
 	}
 	~Camera(void) {};
 	void UpdateCamera(float dt = 1.0f);
