@@ -1,8 +1,11 @@
 #include "CubeRobot.h"
-CubeRobot::CubeRobot(Mesh* cube) {
+CubeRobot::CubeRobot(Mesh* cube, Vector3 pos) {
+
+	this->pos = pos;
+
 	SceneNode* body = new SceneNode(cube, Vector4(1, 0, 0, 1));
 	body->SetModelScale(Vector3(10, 15, 5));
-	body->SetTransform(Matrix4::Translation(Vector3(0,35,0)));
+	body->SetTransform(Matrix4::Translation(Vector3(0,35,0)+pos));
 	body->SetBoundingRadius(15.0f);
 	AddChild(body);
 
@@ -39,7 +42,7 @@ CubeRobot::CubeRobot(Mesh* cube) {
 }
 
 void CubeRobot::Update(float dt) {
-	transform = transform * Matrix4::Rotation(30.0f * dt, Vector3(0, 1, 0));
+	transform = transform * Matrix4::Translation(pos) * Matrix4::Rotation(30.0f * dt, Vector3(0, 1, 0)) * Matrix4::Translation(-pos);
 	head->SetTransform(head->GetTransform() * Matrix4::Rotation(-30.0f * dt, Vector3(0, 1, 0)));
 	leftArm->SetTransform(leftArm->GetTransform() * Matrix4::Rotation(-30.0f * dt, Vector3(1, 0, 0)));
 	rightArm->SetTransform(rightArm->GetTransform() * Matrix4::Rotation(30.0f * dt, Vector3(1, 0, 0)));
