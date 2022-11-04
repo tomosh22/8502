@@ -485,3 +485,30 @@ Mesh* Mesh::GenerateQuad() {
 	m->BufferData();
 	return m;
 }
+
+Mesh* Mesh::GenerateQuad(std::vector<Vector2> positions) {
+	Mesh* m = new Mesh();
+	m->numVertices = 4;
+	m->type = GL_TRIANGLE_STRIP;
+
+	m->vertices = new Vector3[m->numVertices];
+	m->textureCoords = new Vector2[m->numVertices];
+	m->colours = new Vector4[m->numVertices];
+
+	m->vertices[0] = Vector3(positions[0].x, positions[0].y, 0.0f);
+	m->vertices[1] = Vector3(positions[1].x, positions[1].y, 0.0f);
+	m->vertices[2] = Vector3(positions[2].x, positions[2].y, 0.0f);
+	m->vertices[3] = Vector3(positions[3].x, positions[3].y, 0.0f);
+
+	m->textureCoords[0] = Vector2(0.0f, 1.0f);
+	m->textureCoords[1] = Vector2(0.0f, 0.0f);
+	m->textureCoords[2] = Vector2(1.0f, 1.0f);
+	m->textureCoords[3] = Vector2(1.0f, 0.0f);
+
+	for (int i = 0; i < 4; i++)
+	{
+		m->colours[i] = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+	}
+	m->BufferData();
+	return m;
+}

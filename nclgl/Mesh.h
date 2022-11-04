@@ -85,6 +85,7 @@ public:
 
 	static Mesh* GenerateTriangle();
 	static Mesh* GenerateQuad();
+	static Mesh* GenerateQuad(std::vector<Vector2> positions);
 
 protected:
 	void	BufferData();
