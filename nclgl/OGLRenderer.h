@@ -35,6 +35,7 @@ _-_-_-_-_-_-_-""  ""
 #include "Window.h"
 #include "Shader.h"
 #include "Mesh.h"
+#include "Light.h"
 
 using std::vector;
 
@@ -81,6 +82,7 @@ protected:
 	bool	init;			//Did the renderer initialise properly?
 
 	void SetTextureRepeating(GLuint target, bool repeating);
+	void SetShaderLight(const Light& l);
 
 private:
 	Shader* currentShader;	

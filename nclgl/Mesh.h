@@ -89,6 +89,9 @@ public:
 
 protected:
 	void	BufferData();
+	void GenerateNormals();
+	bool GetVertexIndicesForTri(unsigned int i, unsigned int& a, unsigned int& b, unsigned int& c) const;
+
 
 	GLuint	arrayObject;
 
