@@ -5,9 +5,10 @@ class Light
 {
 public:
 	Light() {};
-	Light(const Vector3& position, const Vector4& colour, const float radius) {
+	Light(const Vector3& position, const Vector4& diffuseColour,const Vector4& specularColour, const float radius) {
 		this->position = position;
-		this->colour = colour;
+		this->diffuseColour = diffuseColour;
+		this->specularColour = specularColour;
 		this->radius = radius;
 	}
 	~Light(void) {};
@@ -17,12 +18,16 @@ public:
 	float GetRadius()const { return radius; }
 	void SetRadius(const float& val) { radius = val; }
 
-	Vector4 GetColour() const { return colour; }
-	void SetColour(const Vector4& val) { colour = val; }
+	Vector4 GetDiffuseColour() const { return diffuseColour; }
+	void SetDiffuseColour(const Vector4& val) { diffuseColour = val; }
+
+	Vector4 GetSpecularColour() const { return specularColour; }
+	void SetSpecularColour(const Vector4& val) { specularColour = val; }
 
 protected:
 	Vector3 position;
 	float radius;
-	Vector4 colour;
+	Vector4 diffuseColour;
+	Vector4 specularColour;
 };
 

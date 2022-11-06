@@ -12,10 +12,11 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	SetTextureRepeating(texture, true);
 
 	Vector3 heightMapSize = heightMap->GetHeightMapSize();
-	camera = new Camera(-45, 0, heightMapSize * Vector3(.5, .5, .5));
-	light = new Light(heightMapSize * Vector3(.5, 1.5, .5), Vector4(1, 1, 1, 1), heightMapSize.x * 0.5);
-	projMatrix = Matrix4::Perspective(1, 15000, (float)width / height, 45);
+	camera = new Camera(-25, 225, Vector3(-150, 250, -150));
+	light = new Light(heightMapSize * Vector3(0.5f, 1.5f, 0.5f), Vector4(1, 0, 0, 1), Vector4(0, 1, 0, 1), heightMapSize.x * 0.5f);
+	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / height, 45.0f);
 	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_CULL_FACE);
 	init = true;
 }
 
