@@ -20,5 +20,7 @@ protected:
     Light* light;
     GLuint texture;
     GLuint bumpMap;
+    GLuint matrixUBO;
+    GLuint matrixBind;
 };
 
