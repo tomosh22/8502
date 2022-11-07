@@ -11,9 +11,9 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	if (!shader->LoadSuccess()) {
 		return;
 	}
-	mesh = Mesh::LoadFromMeshFile("Role_T.msh");
-	anim = new MeshAnimation("Role_T.anm");
-	material = new MeshMaterial("Role_T.mat");
+	mesh = Mesh::LoadFromMeshFile("wizard_weapon_macanim.msh");
+	anim = new MeshAnimation("wizard_weapon_macanim.anm");
+	material = new MeshMaterial("wizard_weapon_macanim.mat");
 
 	for (int i = 0; i < mesh->GetSubMeshCount(); i++)
 	{
@@ -58,7 +58,7 @@ void Renderer::RenderScene() {
 	const Matrix4* invBindPose = mesh->GetInverseBindPose();
 	const Matrix4* frameData = anim->GetJointData(currentFrame);
 
-	Matrix4 rotation = ((Matrix4*)(anim->GetJointData(currentFrame)))->GetTransposedRotation();
+	/*Matrix4 rotation = ((Matrix4*)(anim->GetJointData(currentFrame)))->GetTransposedRotation();
 	Quaternion rotationQ = Quaternion(rotation);
 
 	Matrix4 nextRotation = ((Matrix4*)(anim->GetJointData((currentFrame + 1) % anim->GetFrameCount())))->GetTransposedRotation();
@@ -73,7 +73,7 @@ void Renderer::RenderScene() {
 		pos.y * (1.0f - frameTime / (1 / anim->GetFrameRate())) + (nextPos.y * frameTime / (1 / anim->GetFrameRate())),
 		pos.z * (1.0f - frameTime / (1 / anim->GetFrameRate())) + (nextPos.z * frameTime / (1 / anim->GetFrameRate()))
 		);
-	
+	*/
 	//Matrix4 frame = Matrix4::Translation(framePos) * 
 
 	for (int i = 0; i < mesh->GetJointCount(); i++)

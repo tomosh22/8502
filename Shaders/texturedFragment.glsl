@@ -6,18 +6,18 @@ uniform int useTexture;
 
 in Vertex {
 	vec2 texCoord;
-	//vec4 jointWeights;
-	vec4 colour;
+	vec4 jointWeights;
+	//vec4 colour;
 	//float height;
 } IN;
 
 out vec4 fragColour;
 void main(void){
-	if(useTexture > 0){
+	if(true){
 		fragColour = texture(diffuseTex, IN.texCoord);
 	}
 	else{
-		fragColour = IN.colour;
+		//fragColour = IN.colour;
 	}
 	
 	//if(IN.jointWeights.y == 0){
