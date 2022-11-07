@@ -38,5 +38,6 @@ void main(void){
 	fragColour.rgb += (specularColour.rgb * specFactor)*attenuation * 0.33;
 	fragColour.rgb += surface * 0.1;
 	fragColour.a = diffuse.a;
+	fragColour += diffuse * 0.5;
 	//fragColour = vec4(1, 0, 0, 1);
 }

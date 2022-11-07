@@ -3,7 +3,7 @@
 #include "../nclgl/Camera.h"
 #include "../nclgl/HeightMap.h"
 Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
-	heightMap = new HeightMap(TEXTUREDIR"noise.png");
+	heightMap = new HeightMap();
 	texture = SOIL_load_OGL_texture(TEXTUREDIR"Barren Reds.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 	bumpMap = SOIL_load_OGL_texture(TEXTUREDIR"Barren RedsDOT3.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 	shader = new Shader("bumpVertex.glsl", "bumpFragment.glsl");
@@ -15,7 +15,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 
 	Vector3 heightMapSize = heightMap->GetHeightMapSize();
 	camera = new Camera(-25, 225, Vector3(-150, 250, -150));
-	light = new Light(heightMapSize * Vector3(0.5f, 1.5f, 0.5f), Vector4(1, 1, 1, 1), Vector4(1, 1, 1, 1), heightMapSize.x * 0.5f);
+	light = new Light(heightMapSize * Vector3(0.5f, 1.5f, 0.5f), Vector4(1, 0.9, 0.5, 1), Vector4(1, 0.9, 0.5, 1), heightMapSize.x * 0.5f);
 	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / height, 45.0f);
 	modelMatrix = Matrix4();
 	modelMatrix.ToIdentity();
@@ -42,6 +42,7 @@ Renderer::~Renderer(void) {
 }
 
 void Renderer::UpdateScene(float dt) {
+	if (Window::GetKeyboard()->KeyDown(KEYBOARD_0))heightMap = new HeightMap();
 	camera->UpdateCamera(dt);
 	viewMatrix = camera->BuildViewMatrix();
 	glBindBuffer(GL_UNIFORM_BUFFER, matrixUBO);

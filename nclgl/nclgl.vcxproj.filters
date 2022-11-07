@@ -89,6 +89,7 @@
     <ClInclude Include="Frustum.h" />
     <ClInclude Include="HeightMap.h" />
     <ClInclude Include="Light.h" />
+    <ClInclude Include="PerlinNoise.hpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="GLAD">

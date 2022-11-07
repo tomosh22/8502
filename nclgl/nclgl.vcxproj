@@ -61,6 +61,7 @@
     <ClInclude Include="MeshMaterial.h" />
     <ClInclude Include="Mouse.h" />
     <ClInclude Include="OGLRenderer.h" />
+    <ClInclude Include="PerlinNoise.hpp" />
     <ClInclude Include="Plane.h" />
     <ClInclude Include="Quaternion.h" />
     <ClInclude Include="SceneNode.h" />
