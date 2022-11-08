@@ -88,6 +88,9 @@ void Renderer::RenderScene() {
 	matrix.values[6] = viewMatrix.values[9];
 	matrix.values[8] = viewMatrix.values[2];
 	matrix.values[9] = viewMatrix.values[6];
+	matrix.values[0] = viewMatrix.values[0];
+	matrix.values[5] = viewMatrix.values[5];
+	matrix.values[10] = viewMatrix.values[10];
 	matrix = viewMatrix * matrix;
 	glBufferSubData(GL_UNIFORM_BUFFER, 3*sizeof(Matrix4), sizeof(Matrix4), &(matrix.values));
 	//glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(Matrix4), &(particles.at(0).modelMatrix.values));
