@@ -87,6 +87,8 @@ public:
 	static Mesh* GenerateQuad();
 	static Mesh* GenerateQuad(std::vector<Vector2> positions);
 
+	Matrix4 modelMatrix;
+
 protected:
 	void	BufferData();
 	void GenerateNormals();

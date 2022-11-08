@@ -78,7 +78,7 @@ void Renderer::RenderScene() {
 
 	for (int i = 0; i < mesh->GetJointCount(); i++)
 	{
-		frameMatrices.emplace_back(frameData[i] * invBindPose[i]);
+		frameMatrices.emplace_back(frameData[i]);
 	}
 	glUniformMatrix4fv(glGetUniformLocation(shader->GetProgram(),"joints"), frameMatrices.size(), false, (float*)frameMatrices.data());
 	for (int i = 0; i < mesh->GetSubMeshCount(); i++)

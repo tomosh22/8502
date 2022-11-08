@@ -22,6 +22,9 @@ Mesh::Mesh(void)	{
 	colours			= nullptr;
 	weights			= nullptr;
 	weightIndices	= nullptr;
+	
+	this->modelMatrix = Matrix4();
+	this->modelMatrix.ToIdentity();
 }
 
 Mesh::~Mesh(void)	{
