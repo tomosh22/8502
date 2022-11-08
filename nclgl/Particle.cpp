@@ -17,7 +17,23 @@ bool Particle::UpdateParticle(float dt) {
     }
 	
 }
+Particle::Particle() {
+    numVertices = 4;
+    type = GL_TRIANGLE_STRIP;
+    vertices = new Vector3[numVertices];
+    textureCoords = new Vector2[numVertices];
+    //colours = new Vector4[numVertices];
 
+    vertices[0] = Vector3(-1.0f, 1.0f, 0.0f);
+    vertices[1] = Vector3(-1.0f, -1.0f, 0.0f);
+    vertices[2] = Vector3(1.0f, 1.0f, 0.0f);
+    vertices[3] = Vector3(1.0f, -1.0f, 0.0f);
+
+    textureCoords[0] = Vector2(0.0f, 1.0f);
+    textureCoords[1] = Vector2(0.0f, 0.0f);
+    textureCoords[2] = Vector2(1.0f, 1.0f);
+    textureCoords[3] = Vector2(1.0f, 0.0f);
+}
 Particle::Particle(
     const Vector3& position,
     const Vector3& velocity,
@@ -71,4 +87,14 @@ Particle::Particle(
     }
 
     Mesh::BufferData();
+
 };
+
+GLuint Particle::CreateVBO() {
+    GLuint vbo;
+    glGenBuffers(1,&vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    //glBufferData(GL_ARRAY_BUFFER,20 * 4, GL_STREAM_DRAW);
+    glBindVertexArray(arrayObject);
+    return vbo;
+}

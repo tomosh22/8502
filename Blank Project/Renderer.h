@@ -22,6 +22,7 @@ public:
     void UpdateParticles(float dt);
     void GenerateParticles(float dt, Vector3 position, int radius);
     Matrix4 GenerateTransposedMatrix(Particle* p);
+    
 protected:
     HeightMap* heightMap;
     Shader* shader;
@@ -31,7 +32,6 @@ protected:
     GLuint bumpMap;
 
     GLuint matrixUBO;
-    GLuint matrixBind;
 
     GLuint textureUBO;
     GLuint textureBind;
@@ -45,5 +45,12 @@ protected:
     Matrix4 modelViewMatrices[MAX_PARTICLES];
     //Vector3 scales[MAX_PARTICLES];
     Vector4 colours[MAX_PARTICLES];
+
+    GLuint vbo1;
+    GLuint vbo3;
+    GLuint vbo4;
+    GLuint vbo5;
+    GLuint vbo6;
+    Particle* masterParticle;
 };
 

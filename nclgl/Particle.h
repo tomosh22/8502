@@ -8,6 +8,7 @@ class Particle :
     public Mesh
 {
 public:
+    Particle();
     Particle(
         const Vector3& position,
         const Vector3& velocity,
@@ -23,7 +24,9 @@ public:
     bool UpdateParticle(float dt);
     Vector4 GetColour() { return colour; }
     Vector3 GetScale() { return scale; }
+    GLuint GetVAO() { return arrayObject; }
 protected:
+    GLuint CreateVBO();
     Vector3 velocity;
     Vector3 gravity;
     float duration;

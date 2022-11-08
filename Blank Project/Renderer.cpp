@@ -14,7 +14,11 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	}*/
 	particleTime = 0;
 	particleShader = new Shader("particleVertex.glsl", "particleFragment.glsl");
-
+	glBindAttribLocation(particleShader->GetProgram(), 1, "column0");
+	glBindAttribLocation(particleShader->GetProgram(), 3, "column1");
+	glBindAttribLocation(particleShader->GetProgram(), 4, "column2");
+	glBindAttribLocation(particleShader->GetProgram(), 5, "column3");
+	glBindAttribLocation(particleShader->GetProgram(), 6, "colourInstanced");
 	
 
 
@@ -38,15 +42,26 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	glEnable(GL_CULL_FACE);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	matrixBind = glGetUniformBlockIndex(shader->GetProgram(), "matrices");
-	glUniformBlockBinding(shader->GetProgram(), matrixBind, 0);
+	
 	glGenBuffers(1, &matrixUBO);
 	glBindBuffer(GL_UNIFORM_BUFFER, matrixUBO);
+	glUniformBlockBinding(shader->GetProgram(), glGetUniformBlockIndex(shader->GetProgram(), "matrices"), 0);
+	glBindBufferBase(GL_UNIFORM_BUFFER, 0, matrixUBO);
 	glBufferData(GL_UNIFORM_BUFFER, 4 * sizeof(Matrix4), NULL, GL_STATIC_DRAW);
-	glBindBufferRange(GL_UNIFORM_BUFFER, 0, matrixUBO, 0, 3 * sizeof(Matrix4));
 	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(Matrix4), &(modelMatrix.values));
 	glBufferSubData(GL_UNIFORM_BUFFER, 2 * sizeof(Matrix4), sizeof(Matrix4), &(projMatrix.values));
+
+
+	masterParticle = new Particle();
+	glGenBuffers(1, &vbo1);
+	glGenBuffers(1, &vbo3);
+	glGenBuffers(1, &vbo4);
+	glGenBuffers(1, &vbo5);
+	glGenBuffers(1, &vbo6);
+	
 	init = true;
+
+	
 }
 
 Renderer::~Renderer(void) {
@@ -144,13 +159,77 @@ void Renderer::RenderParticles() {
 	glBindTexture(GL_TEXTURE_2D, particleTexture);
 	UpdateShaderMatrices();
 	//glDisable(GL_DEPTH_TEST);
+	float column0s[MAX_PARTICLES][4]{};
+	float column1s[MAX_PARTICLES][4]{};
+	float column2s[MAX_PARTICLES][4]{};
+	float column3s[MAX_PARTICLES][4]{};
+	float coloursGPU[MAX_PARTICLES][4]{};
 	for (int x = 0; x < particles.size();x++)
 	{
+		float matrix[4][4];
 		modelViewMatrices[x] = GenerateTransposedMatrix(particles.at(x));
+		for (int i = 0; i < 4; i++)
+		{
+			column0s[x][i] = modelViewMatrices[x].values[i];
+		}
+		for (int i = 0; i < 4; i++)
+		{
+			column1s[x][i] = modelViewMatrices[x].values[4+i];
+		}
+		for (int i = 0; i < 4; i++)
+		{
+			column2s[x][i] = modelViewMatrices[x].values[8+i];
+		}
+		for (int i = 0; i < 4; i++)
+		{
+			column3s[x][i] = modelViewMatrices[x].values[12+i];
+		}
+
+
 		colours[x] = particles.at(x)->GetColour();
 
-		RenderParticle(particles.at(x));
+		coloursGPU[x][0] = colours[x].x;
+		coloursGPU[x][1] = colours[x].y;
+		coloursGPU[x][2] = colours[x].z;
+		coloursGPU[x][3] = colours[x].w;
+		
+
+
+		//RenderParticle(particles.at(x));
 	}
+	glBindVertexArray(masterParticle->GetVAO());
+
+	glBindBuffer(GL_ARRAY_BUFFER, vbo1);
+	glBufferData(GL_ARRAY_BUFFER, MAX_PARTICLES * 4 * sizeof(float), column0s, GL_STREAM_DRAW);
+	glVertexAttribPointer(1, sizeof(float), GL_FLOAT, GL_FALSE, 0, 0);
+	glVertexAttribDivisor(1, 1);
+	glEnableVertexAttribArray(1);
+
+	glBindBuffer(GL_ARRAY_BUFFER, vbo3);
+	glBufferData(GL_ARRAY_BUFFER, MAX_PARTICLES * 4 * sizeof(float), column1s, GL_STREAM_DRAW);
+	glVertexAttribPointer(3, sizeof(float), GL_FLOAT, GL_FALSE, 0, 0);
+	glVertexAttribDivisor(3, 1);
+	glEnableVertexAttribArray(3);
+
+	glBindBuffer(GL_ARRAY_BUFFER, vbo4);
+	glBufferData(GL_ARRAY_BUFFER, MAX_PARTICLES * 4 * sizeof(float), column2s, GL_STREAM_DRAW);
+	glVertexAttribPointer(4, sizeof(float), GL_FLOAT, GL_FALSE, 0, 0);
+	glVertexAttribDivisor(4, 1);
+	glEnableVertexAttribArray(4);
+
+	glBindBuffer(GL_ARRAY_BUFFER, vbo5);
+	glBufferData(GL_ARRAY_BUFFER, MAX_PARTICLES * 4 * sizeof(float), column3s, GL_STREAM_DRAW);
+	glVertexAttribPointer(5, sizeof(float), GL_FLOAT, GL_FALSE, 0, 0);
+	glVertexAttribDivisor(5, 1);
+	glEnableVertexAttribArray(5);
+	
+	glBindBuffer(GL_ARRAY_BUFFER, vbo6);
+	glBufferData(GL_ARRAY_BUFFER, MAX_PARTICLES * 4 * sizeof(float), coloursGPU, GL_STREAM_DRAW);
+	glVertexAttribPointer(6, sizeof(float), GL_FLOAT, GL_FALSE, 0, 0);
+	glVertexAttribDivisor(6, 1);
+	glEnableVertexAttribArray(6);
+
+	glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, MAX_PARTICLES);
 	//glEnable(GL_DEPTH_TEST);
 }
 
