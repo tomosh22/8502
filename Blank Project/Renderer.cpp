@@ -16,7 +16,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	particleShader = new Shader("particleVertex.glsl", "particleFragment.glsl");
 	BindShader(particleShader);
 	particles = new std::vector<Particle*>();
-	masterParticle = new Particle();
+	masterParticle = Mesh::GenerateQuad();
 	glGenBuffers(1, &vbo1);
 	glGenBuffers(1, &vbo3);
 	glGenBuffers(1, &vbo4);
@@ -59,11 +59,11 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	glBufferSubData(GL_UNIFORM_BUFFER, 2 * sizeof(Matrix4), sizeof(Matrix4), &(projMatrix.values));
 
 
-	glGenBuffers(1, &columnUBO);
+	/*glGenBuffers(1, &columnUBO);
 	glBindBuffer(GL_UNIFORM_BUFFER, columnUBO);
 	glUniformBlockBinding(particleShader->GetProgram(), glGetUniformBlockIndex(particleShader->GetProgram(), "columns"), 1);
 	glBindBufferBase(GL_UNIFORM_BUFFER, 1, columnUBO);
-	glBufferData(GL_UNIFORM_BUFFER, 4* sizeof(Vector4), NULL, GL_STATIC_DRAW);
+	glBufferData(GL_UNIFORM_BUFFER, 4* sizeof(Vector4), NULL, GL_STATIC_DRAW);*/
 
 	
 	
@@ -78,11 +78,14 @@ Renderer::~Renderer(void) {
 	delete heightMap;
 	delete shader;
 	delete light;
+	delete particles;
+	delete particleShader;
+	delete masterParticle;
 }
 
 void Renderer::GenerateParticles(float dt, Vector3 position, int radius) {
 	particleTime += dt;
-	
+	//return;
 		for (int x = 0; x < 100; x++)
 		{
 			if (particles->size() >= MAX_PARTICLES)return;
@@ -288,6 +291,7 @@ void Renderer::RenderParticles() {
 
 	//glDisable(GL_DEPTH_TEST);
 	glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, MAX_PARTICLES);
+	//glBindVertexArray(0);
 	//glEnable(GL_DEPTH_TEST);
 }
 

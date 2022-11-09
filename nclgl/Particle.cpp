@@ -17,31 +17,7 @@ bool Particle::UpdateParticle(float dt) {
     }
 	
 }
-Particle::Particle() {
-    numVertices = 4;
-    type = GL_TRIANGLE_STRIP;
-    vertices = new Vector3[numVertices];
-    textureCoords = new Vector2[numVertices];
-    //colours = new Vector4[numVertices];
 
-    vertices[0] = Vector3(-1.0f, 1.0f, 0.0f);
-    vertices[1] = Vector3(-1.0f, -1.0f, 0.0f);
-    vertices[2] = Vector3(1.0f, 1.0f, 0.0f);
-    vertices[3] = Vector3(1.0f, -1.0f, 0.0f);
-
-    textureCoords[0] = Vector2(0.0f, 1.0f);
-    textureCoords[1] = Vector2(0.0f, 0.0f);
-    textureCoords[2] = Vector2(1.0f, 1.0f);
-    textureCoords[3] = Vector2(1.0f, 0.0f);
-
-    colour = Vector4(1, 1, 1, 1);
-    scale = Vector3(1, 1, 1);
-    gravity = Vector3(0, 0, 0);
-    this->modelMatrix = Matrix4::Translation(Vector3(0, 0, 0));
-    duration = 999999;
-    elapsed = 0;
-    Mesh::BufferData();
-}
 Particle::Particle(
     const Vector3& position,
     const Vector3& velocity,
@@ -54,6 +30,7 @@ Particle::Particle(
     const Vector3& endScale,
     const bool& constScale) {
 
+
     this->velocity = velocity;
     this->gravity = gravity;
     this->duration = duration;
@@ -64,22 +41,6 @@ Particle::Particle(
     this->constScale = constScale;
 
     this->modelMatrix = Matrix4::Translation(position);
-
-    numVertices = 4;
-    type = GL_TRIANGLE_STRIP;
-    vertices = new Vector3[numVertices];
-    textureCoords = new Vector2[numVertices];
-    //colours = new Vector4[numVertices];
-
-    vertices[0] = Vector3(-1.0f, 1.0f, 0.0f);
-    vertices[1] = Vector3(-1.0f, -1.0f, 0.0f);
-    vertices[2] = Vector3(1.0f, 1.0f, 0.0f);
-    vertices[3] = Vector3(1.0f, -1.0f, 0.0f);
-
-    textureCoords[0] = Vector2(0.0f, 1.0f);
-    textureCoords[1] = Vector2(0.0f, 0.0f);
-    textureCoords[2] = Vector2(1.0f, 1.0f);
-    textureCoords[3] = Vector2(1.0f, 0.0f);
 
     if (constColour) {
         colour = startColour;
@@ -94,15 +55,7 @@ Particle::Particle(
         this->endScale = endScale;
     }
 
-    Mesh::BufferData();
+    //Mesh::BufferData();
 
 };
 
-GLuint Particle::CreateVBO() {
-    GLuint vbo;
-    glGenBuffers(1,&vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    //glBufferData(GL_ARRAY_BUFFER,20 * 4, GL_STREAM_DRAW);
-    glBindVertexArray(arrayObject);
-    return vbo;
-}

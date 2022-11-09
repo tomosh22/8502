@@ -55,6 +55,6 @@ protected:
     GLuint vbo6;
     GLuint vbo7;
 
-    Particle* masterParticle;
+    Mesh* masterParticle;
 };
 
