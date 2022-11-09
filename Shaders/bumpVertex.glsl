@@ -8,6 +8,7 @@ layout(std140) uniform matrices{
 	mat4 modelMatrix;
 	mat4 viewMatrix;
 	mat4 projMatrix;
+	mat4 modelViewMatrix;
 };
 
 in vec3 position;

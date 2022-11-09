@@ -32,6 +32,7 @@ protected:
     GLuint bumpMap;
 
     GLuint matrixUBO;
+    GLuint columnUBO;
 
     GLuint textureUBO;
     GLuint textureBind;
@@ -51,6 +52,8 @@ protected:
     GLuint vbo4;
     GLuint vbo5;
     GLuint vbo6;
+    GLuint vbo7;
+
     Particle* masterParticle;
 };
 

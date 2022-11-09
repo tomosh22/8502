@@ -5,7 +5,7 @@
 #include "../nclgl/Particle.h"
 Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	srand(time(0));
-	particleTexture = SOIL_load_OGL_texture(TEXTUREDIR"flame_particle.png", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	particleTexture = SOIL_load_OGL_texture(TEXTUREDIR"particle.tga", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 	
 	/*for (int x = 0; x < 2; x++)
 	{
@@ -19,6 +19,8 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	glBindAttribLocation(particleShader->GetProgram(), 4, "column2");
 	glBindAttribLocation(particleShader->GetProgram(), 5, "column3");
 	glBindAttribLocation(particleShader->GetProgram(), 6, "colourInstanced");
+
+	//glBindAttribLocation(particleShader->GetProgram(), 7, "singleMatrix");
 	
 
 
@@ -46,11 +48,18 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	glGenBuffers(1, &matrixUBO);
 	glBindBuffer(GL_UNIFORM_BUFFER, matrixUBO);
 	glUniformBlockBinding(shader->GetProgram(), glGetUniformBlockIndex(shader->GetProgram(), "matrices"), 0);
+	glUniformBlockBinding(particleShader->GetProgram(), glGetUniformBlockIndex(particleShader->GetProgram(), "matrices"), 0);
 	glBindBufferBase(GL_UNIFORM_BUFFER, 0, matrixUBO);
 	glBufferData(GL_UNIFORM_BUFFER, 4 * sizeof(Matrix4), NULL, GL_STATIC_DRAW);
 	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(Matrix4), &(modelMatrix.values));
 	glBufferSubData(GL_UNIFORM_BUFFER, 2 * sizeof(Matrix4), sizeof(Matrix4), &(projMatrix.values));
 
+
+	glGenBuffers(1, &columnUBO);
+	glBindBuffer(GL_UNIFORM_BUFFER, columnUBO);
+	glUniformBlockBinding(particleShader->GetProgram(), glGetUniformBlockIndex(particleShader->GetProgram(), "columns"), 1);
+	glBindBufferBase(GL_UNIFORM_BUFFER, 1, columnUBO);
+	glBufferData(GL_UNIFORM_BUFFER, 4* sizeof(Vector4), NULL, GL_STATIC_DRAW);
 
 	masterParticle = new Particle();
 	glGenBuffers(1, &vbo1);
@@ -58,7 +67,9 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	glGenBuffers(1, &vbo4);
 	glGenBuffers(1, &vbo5);
 	glGenBuffers(1, &vbo6);
+	//glGenBuffers(1, &vbo7);
 	
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 	init = true;
 
 	
@@ -74,7 +85,7 @@ Renderer::~Renderer(void) {
 void Renderer::GenerateParticles(float dt, Vector3 position, int radius) {
 	particleTime += dt;
 	if (particleTime > 0.01f || true) {
-		for (int x = 0; x < 100; x++)
+		for (int x = 0; x < 10; x++)
 		{
 			if (particles.size() >= MAX_PARTICLES)return;
 			Particle* particle = new Particle(
@@ -102,7 +113,9 @@ void Renderer::UpdateScene(float dt) {
 
 	camera->UpdateCamera(dt);
 	viewMatrix = camera->BuildViewMatrix();
+	glBindBuffer(GL_UNIFORM_BUFFER, matrixUBO);
 	glBufferSubData(GL_UNIFORM_BUFFER, sizeof(Matrix4), sizeof(Matrix4), &(viewMatrix.values));
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 	GenerateParticles(dt,Vector3(0,0,0),100);
 	UpdateParticles(dt);
 }
@@ -130,8 +143,47 @@ void Renderer::RenderParticle(Particle* p) {
 	matrix.values[5] = viewMatrix.values[5];
 	matrix.values[10] = viewMatrix.values[10];
 	matrix = viewMatrix * matrix * Matrix4::Scale(p->GetScale());
+	glBindBuffer(GL_UNIFORM_BUFFER, matrixUBO);
 	glBufferSubData(GL_UNIFORM_BUFFER, 3 * sizeof(Matrix4), sizeof(Matrix4), &(matrix.values));
 	glUniform4fv(glGetUniformLocation(particleShader->GetProgram(), "colour"),1, (float*)&(p->GetColour()));
+	
+
+
+
+	float column0[4]{};
+	float column1[4]{};
+	float column2[4]{};
+	float column3[4]{};
+	for (int i = 0; i < 4; i++)
+	{
+		column0[i] = matrix.values[i];
+	}
+	for (int i = 0; i < 4; i++)
+	{
+		column1[i] = matrix.values[4 + i];
+	}
+	for (int i = 0; i < 4; i++)
+	{
+		column2[i] = matrix.values[8 + i];
+	}
+	for (int i = 0; i < 4; i++)
+	{
+		column3[i] = matrix.values[12 + i];
+	}
+
+	glBindBuffer(GL_UNIFORM_BUFFER, matrixUBO);
+	glBufferSubData(GL_UNIFORM_BUFFER, 0, 4 * sizeof(float), (float*)&p->GetColour());
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+	glBindBuffer(GL_UNIFORM_BUFFER, columnUBO);
+	//glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(Matrix4), &matrix.values);
+	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(Vector4), &column0);
+	glBufferSubData(GL_UNIFORM_BUFFER, sizeof(Vector4), sizeof(Vector4), &column1);
+	glBufferSubData(GL_UNIFORM_BUFFER, 2 * sizeof(Vector4), sizeof(Vector4), &column2);
+	glBufferSubData(GL_UNIFORM_BUFFER, 3 * sizeof(Vector4), sizeof(Vector4), &column3);
+
+
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 	p->Draw();
 }
 
@@ -164,10 +216,12 @@ void Renderer::RenderParticles() {
 	float column2s[MAX_PARTICLES][4]{};
 	float column3s[MAX_PARTICLES][4]{};
 	float coloursGPU[MAX_PARTICLES][4]{};
+	//Matrix4 matrices[MAX_PARTICLES]{};
 	for (int x = 0; x < particles.size();x++)
 	{
 		float matrix[4][4];
 		modelViewMatrices[x] = GenerateTransposedMatrix(particles.at(x));
+		//matrices[x] = modelViewMatrices[x];
 		for (int i = 0; i < 4; i++)
 		{
 			column0s[x][i] = modelViewMatrices[x].values[i];
@@ -194,40 +248,49 @@ void Renderer::RenderParticles() {
 		coloursGPU[x][3] = colours[x].w;
 		
 
-
-		//RenderParticle(particles.at(x));
+		//RenderParticle(masterParticle);
+		RenderParticle(particles.at(x));
 	}
 	glBindVertexArray(masterParticle->GetVAO());
 
 	glBindBuffer(GL_ARRAY_BUFFER, vbo1);
 	glBufferData(GL_ARRAY_BUFFER, MAX_PARTICLES * 4 * sizeof(float), column0s, GL_STREAM_DRAW);
 	glVertexAttribPointer(1, sizeof(float), GL_FLOAT, GL_FALSE, 0, 0);
-	glVertexAttribDivisor(1, 1);
 	glEnableVertexAttribArray(1);
+	glVertexAttribDivisor(1, 1);
 
 	glBindBuffer(GL_ARRAY_BUFFER, vbo3);
 	glBufferData(GL_ARRAY_BUFFER, MAX_PARTICLES * 4 * sizeof(float), column1s, GL_STREAM_DRAW);
 	glVertexAttribPointer(3, sizeof(float), GL_FLOAT, GL_FALSE, 0, 0);
-	glVertexAttribDivisor(3, 1);
 	glEnableVertexAttribArray(3);
+	glVertexAttribDivisor(3, 1);
 
 	glBindBuffer(GL_ARRAY_BUFFER, vbo4);
 	glBufferData(GL_ARRAY_BUFFER, MAX_PARTICLES * 4 * sizeof(float), column2s, GL_STREAM_DRAW);
 	glVertexAttribPointer(4, sizeof(float), GL_FLOAT, GL_FALSE, 0, 0);
-	glVertexAttribDivisor(4, 1);
 	glEnableVertexAttribArray(4);
+	glVertexAttribDivisor(4, 1);
 
 	glBindBuffer(GL_ARRAY_BUFFER, vbo5);
 	glBufferData(GL_ARRAY_BUFFER, MAX_PARTICLES * 4 * sizeof(float), column3s, GL_STREAM_DRAW);
 	glVertexAttribPointer(5, sizeof(float), GL_FLOAT, GL_FALSE, 0, 0);
-	glVertexAttribDivisor(5, 1);
 	glEnableVertexAttribArray(5);
+	glVertexAttribDivisor(5, 1);
 	
 	glBindBuffer(GL_ARRAY_BUFFER, vbo6);
 	glBufferData(GL_ARRAY_BUFFER, MAX_PARTICLES * 4 * sizeof(float), coloursGPU, GL_STREAM_DRAW);
 	glVertexAttribPointer(6, sizeof(float), GL_FLOAT, GL_FALSE, 0, 0);
-	glVertexAttribDivisor(6, 1);
 	glEnableVertexAttribArray(6);
+	glVertexAttribDivisor(6, 1);
+
+
+	/*glBindBuffer(GL_ARRAY_BUFFER, vbo7);
+	glBufferData(GL_ARRAY_BUFFER, MAX_PARTICLES * sizeof(Matrix4), &matrices, GL_STREAM_DRAW);
+	glVertexAttribPointer(7, sizeof(Matrix4), GL_FLOAT, GL_FALSE, 0, 0);
+	glEnableVertexAttribArray(7);
+	glVertexAttribDivisor(7, 1);*/
+
+
 
 	glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, MAX_PARTICLES);
 	//glEnable(GL_DEPTH_TEST);
@@ -235,7 +298,9 @@ void Renderer::RenderParticles() {
 
 void Renderer::RenderScene() {
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+	glBindBuffer(GL_UNIFORM_BUFFER, matrixUBO);
 	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(Matrix4), &(modelMatrix.values));
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 	BindShader(shader);
 	glUniform1i(glGetUniformLocation(shader->GetProgram(), "diffuseTex"), 0);
 	glActiveTexture(GL_TEXTURE0);

@@ -33,6 +33,14 @@ Particle::Particle() {
     textureCoords[1] = Vector2(0.0f, 0.0f);
     textureCoords[2] = Vector2(1.0f, 1.0f);
     textureCoords[3] = Vector2(1.0f, 0.0f);
+
+    colour = Vector4(1, 1, 1, 1);
+    scale = Vector3(1, 1, 1);
+    gravity = Vector3(0, 0, 0);
+    this->modelMatrix = Matrix4::Translation(Vector3(0, 0, 0));
+    duration = 999999;
+    elapsed = 0;
+    Mesh::BufferData();
 }
 Particle::Particle(
     const Vector3& position,
