@@ -1,12 +1,13 @@
 #pragma once
 #include "../nclgl/OGLRenderer.h"
+#include <array>
 class HeightMap;
 class Camera;
 class Light;
 class Shader;
 class Particle;
 
-#define MAX_PARTICLES 1000
+#define MAX_PARTICLES 100000
 class Renderer :
     public OGLRenderer
 {
@@ -37,15 +38,15 @@ protected:
     GLuint textureUBO;
     GLuint textureBind;
 
-    std::vector<Particle*> particles;
+    std::vector<Particle*>* particles;
     GLuint particleTexture;
     Shader* particleShader;
 
     float particleTime;
 
-    Matrix4 modelViewMatrices[MAX_PARTICLES];
+    //Matrix4 modelViewMatrices[MAX_PARTICLES];
     //Vector3 scales[MAX_PARTICLES];
-    Vector4 colours[MAX_PARTICLES];
+    //Vector4 colours[MAX_PARTICLES];
 
     GLuint vbo1;
     GLuint vbo3;
