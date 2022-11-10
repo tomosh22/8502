@@ -129,7 +129,7 @@ void Renderer::UpdateParticles(float dt) {
 }
 
 void Renderer::UpdateScene(float dt) {
-	std::cout << (float)1 / dt << '\n';
+	std::cout << (float)1 / dt << " fps\n" << particleIndex << " particles\n";
 	if (Window::GetKeyboard()->KeyDown(KEYBOARD_0)) { delete heightMap; heightMap = new HeightMap(); }
 	if (Window::GetKeyboard()->KeyDown(KEYBOARD_1))particles->at(0)->modelMatrix = particles->at(0)->modelMatrix * Matrix4::Translation(Vector3(1, 1, 1));
 	if (Window::GetKeyboard()->KeyDown(KEYBOARD_2))particles->at(1)->modelMatrix = particles->at(1)->modelMatrix * Matrix4::Translation(Vector3(1, 1, 1));
@@ -202,36 +202,36 @@ void Renderer::RenderParticles() {
 	glBindVertexArray(masterParticle->GetVAO());
 
 	glBindBuffer(GL_ARRAY_BUFFER, vbo1);
-	glBufferData(GL_ARRAY_BUFFER, MAX_PARTICLES * 4 * sizeof(float), column0s->data(), GL_STREAM_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, particleIndex * 4 * sizeof(float), column0s->data(), GL_STREAM_DRAW);
 	glVertexAttribPointer(1, sizeof(float), GL_FLOAT, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(1);
 	glVertexAttribDivisor(1, 1);
 
 	glBindBuffer(GL_ARRAY_BUFFER, vbo3);
-	glBufferData(GL_ARRAY_BUFFER, MAX_PARTICLES * 4 * sizeof(float), column1s->data(), GL_STREAM_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, particleIndex * 4 * sizeof(float), column1s->data(), GL_STREAM_DRAW);
 	glVertexAttribPointer(3, sizeof(float), GL_FLOAT, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(3);
 	glVertexAttribDivisor(3, 1);
 
 	glBindBuffer(GL_ARRAY_BUFFER, vbo4);
-	glBufferData(GL_ARRAY_BUFFER, MAX_PARTICLES * 4 * sizeof(float), column2s->data(), GL_STREAM_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, particleIndex * 4 * sizeof(float), column2s->data(), GL_STREAM_DRAW);
 	glVertexAttribPointer(4, sizeof(float), GL_FLOAT, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(4);
 	glVertexAttribDivisor(4, 1);
 
 	glBindBuffer(GL_ARRAY_BUFFER, vbo5);
-	glBufferData(GL_ARRAY_BUFFER, MAX_PARTICLES * 4 * sizeof(float), column3s->data(), GL_STREAM_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, particleIndex * 4 * sizeof(float), column3s->data(), GL_STREAM_DRAW);
 	glVertexAttribPointer(5, sizeof(float), GL_FLOAT, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(5);
 	glVertexAttribDivisor(5, 1);
 	
 	glBindBuffer(GL_ARRAY_BUFFER, vbo6);
-	glBufferData(GL_ARRAY_BUFFER, MAX_PARTICLES * 4 * sizeof(float), coloursGPU->data(), GL_STREAM_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, particleIndex * 4 * sizeof(float), coloursGPU->data(), GL_STREAM_DRAW);
 	glVertexAttribPointer(6, sizeof(float), GL_FLOAT, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(6);
 	glVertexAttribDivisor(6, 1);
 
-	glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, MAX_PARTICLES);
+	glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, particleIndex);
 
 	
 

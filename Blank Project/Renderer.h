@@ -8,7 +8,7 @@ class Light;
 class Shader;
 class Particle;
 
-#define MAX_PARTICLES 1000000
+#define MAX_PARTICLES 10000000
 class Renderer :
     public OGLRenderer
 {
