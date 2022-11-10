@@ -4,12 +4,15 @@ class Vector3;
 
 
 
-class Particle :
-    public Mesh
+class Particle 
+    
 {
 public:
-    Particle();
-    Particle(
+    
+    Particle() {
+        alive = false; duration = 0; elapsed = 0; oneFramePassed = false; twoFramesPassed = false;
+    };
+    void InitParticle(
         const Vector3& position,
         const Vector3& velocity,
         const Vector3& gravity,
@@ -20,24 +23,32 @@ public:
         const Vector3& startScale,
         const Vector3& endScale,
         const bool& constScale);
-    ~Particle();
+    ~Particle() {};
     bool UpdateParticle(float dt);
     Vector4 GetColour() { return colour; }
     Vector3 GetScale() { return scale; }
-    GLuint GetVAO() { return arrayObject; }
+    Matrix4 modelMatrix;
+    bool alive;
+    Vector4 colour;
+    Vector4 startColour;
+    float elapsed;
+    float duration;
+    bool oneFramePassed;
+    bool twoFramesPassed;
 protected:
-    GLuint CreateVBO();
     Vector3 velocity;
     Vector3 gravity;
-    float duration;
-    Vector4 startColour;
+    
+    
     Vector4 endColour;
     bool constColour;
-    Vector4 colour;
-    float elapsed;
+    
+    
     Vector3 startScale;
     Vector3 endScale;
     bool constScale;
     Vector3 scale;
+    
+    
 };
 

@@ -1,5 +1,8 @@
 #include "Particle.h"
 bool Particle::UpdateParticle(float dt) {
+    if (!alive) {
+        std::cout << "shouldnt be updating dead particle\n";
+    }
 	elapsed += dt;
 	if (elapsed >= duration)return false;
     velocity = velocity - gravity * dt;
@@ -15,10 +18,10 @@ bool Particle::UpdateParticle(float dt) {
         scale.y = startScale.y + (endScale.y - startScale.y) * elapsed / duration;
         scale.z = startScale.z + (endScale.z - startScale.z) * elapsed / duration;
     }
-	
+    return true;
 }
 
-Particle::Particle(
+void Particle::InitParticle(
     const Vector3& position,
     const Vector3& velocity,
     const Vector3& gravity,
@@ -30,7 +33,9 @@ Particle::Particle(
     const Vector3& endScale,
     const bool& constScale) {
 
-
+    alive = true;
+    oneFramePassed = false;
+    twoFramesPassed = false;
     this->velocity = velocity;
     this->gravity = gravity;
     this->duration = duration;
@@ -55,7 +60,6 @@ Particle::Particle(
         this->endScale = endScale;
     }
 
-    //Mesh::BufferData();
 
 };
 
