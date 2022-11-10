@@ -5,6 +5,7 @@
 #include "../nclgl/Particle.h"
 Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	//glClearColor(0.2, 0.4, 0.2, 1);
 	srand(time(0));
 	particleTexture = SOIL_load_OGL_texture(TEXTUREDIR"flame_particle.png", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 	
@@ -98,7 +99,7 @@ void Renderer::GenerateParticles(float dt, Vector3 position, int radius) {
 				Vector3(0, -50, 0),
 				3,
 				Vector4(0, 0, 1, 1),
-				Vector4(1, 0, 1, 1),
+				Vector4(0, 1, 1, 1),
 				false,
 				Vector3(5, 5, 5),
 				Vector3(3, 3, 3),
@@ -114,10 +115,15 @@ void Renderer::UpdateParticles(float dt) {
 	{
 		if (!particles->at(x)->UpdateParticle(dt)) {
 			particles->at(x)->alive = false;
-			//particles->at(x)->elapsed = 0;
+			particles->at(x)->elapsed = 0;
 			particles->at(x)->colour = particles->at(x)->startColour;
 			particles->at(x)->modelMatrix.ToIdentity();
 			std::swap(particles->at(x), particles->at(--particleIndex));
+			column0s->at(particleIndex) = { 0,0,0,0 };
+			column1s->at(particleIndex) = { 0,0,0,0 };
+			column2s->at(particleIndex) = { 0,0,0,0 };
+			column3s->at(particleIndex) = { 0,0,0,0 };
+			coloursGPU->at(particleIndex) = { 0,0,0,0 };
 		}
 	}
 }
@@ -159,18 +165,17 @@ Matrix4 Renderer::GenerateTransposedMatrix(Particle* p) {
 }
 
 void Renderer::RenderParticles() {
-	column0s->fill({ 0,0,0,0 });
-	column1s->fill({ 0,0,0,0 });
-	column2s->fill({ 0,0,0,0 });
-	column3s->fill({ 0,0,0,0 });
-	coloursGPU->fill({ 0,0,0,0 });
+	
 	BindShader(particleShader);
 	glUniform1i(glGetUniformLocation(shader->GetProgram(), "particleTex"), 0);
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, particleTexture);
 	
-	for (int x = 0; x < MAX_PARTICLES && particles->at(x)->alive;x++)
+	for (int x = 0; x < particleIndex;x++)
 	{
+		if (!particles->at(x)->alive) {
+			return;
+		}
 		Matrix4 matrix = GenerateTransposedMatrix(particles->at(x));
 		for (int i = 0; i < 4; i++)
 		{
