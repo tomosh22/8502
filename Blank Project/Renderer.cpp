@@ -9,6 +9,15 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	srand(time(0));
 	particleTexture = SOIL_load_OGL_texture(TEXTUREDIR"flame_particle.png", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 	
+	grassShader = new Shader("grassVertex.glsl", "grassFragment.glsl","","","");
+	if (!grassShader->LoadSuccess()) {
+		return;
+	}
+	grassQuad = Mesh::GenerateQuad();
+	grassQuad->modelMatrix = grassQuad->modelMatrix * Matrix4::Translation(Vector3(50, 50, -100));
+	grassQuad->modelMatrix = grassQuad->modelMatrix * Matrix4::Scale(Vector3(50, 50, 50));
+	grassQuad->modelMatrix = grassQuad->modelMatrix * Matrix4::Rotation(90,Vector3(1, 0, 0));
+	tesselationLevel = 1;
 	
 	particleTime = 0;
 	particleShader = new Shader("particleVertex.glsl", "particleFragment.glsl");
@@ -33,6 +42,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	glGenBuffers(1, &vbo5);
 	glGenBuffers(1, &vbo6);
 	
+	
 
 
 	heightMap = new HeightMap();
@@ -46,13 +56,13 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	SetTextureRepeating(bumpMap, true);
 
 	Vector3 heightMapSize = heightMap->GetHeightMapSize();
-	camera = new Camera(0, 0, Vector3(0, 0, 0));
+	camera = new Camera(0, 0, Vector3(50, 50, 50));
 	light = new Light(heightMapSize * Vector3(0.5f, 1.5f, 0.5f), Vector4(1, 0.9, 0.5, 1), Vector4(1, 0.9, 0.5, 1), heightMapSize.x * 0.5f);
 	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / height, 45.0f);
 	modelMatrix = Matrix4();
 	modelMatrix.ToIdentity();
 	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_CULL_FACE);
+	//glEnable(GL_CULL_FACE);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	
@@ -62,6 +72,9 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	glUniformBlockBinding(particleShader->GetProgram(), glGetUniformBlockIndex(particleShader->GetProgram(), "matrices"), 0);
 	glBindBufferBase(GL_UNIFORM_BUFFER, 0, matrixUBO);
 	glBufferData(GL_UNIFORM_BUFFER, 4 * sizeof(Matrix4), NULL, GL_STATIC_DRAW);
+
+
+
 	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(Matrix4), &(modelMatrix.values));
 	glBufferSubData(GL_UNIFORM_BUFFER, 2 * sizeof(Matrix4), sizeof(Matrix4), &(projMatrix.values));
 
@@ -83,12 +96,19 @@ Renderer::~Renderer(void) {
 	delete column2s;
 	delete column3s;
 	delete coloursGPU;
-	//delete particles;
+	delete grassQuad;
+	delete grassShader;
+	//todo fix memory leak
+	/*for (int i = 0; i < MAX_PARTICLES; i++)
+	{
+		delete particles->at(i);
+	}
+	delete particles;*/
 }
 
 void Renderer::GenerateParticles(float dt, Vector3 position, int radius) {
 	particleTime += dt;
-		for (int x = 0; x < 50; x++)
+		for (int x = 0; x < 100; x++)
 		{
 			if (particleIndex == MAX_PARTICLES - 1) {
 				return;
@@ -133,7 +153,9 @@ void Renderer::UpdateScene(float dt) {
 	if (Window::GetKeyboard()->KeyDown(KEYBOARD_0)) { delete heightMap; heightMap = new HeightMap(); }
 	if (Window::GetKeyboard()->KeyDown(KEYBOARD_1))particles->at(0)->modelMatrix = particles->at(0)->modelMatrix * Matrix4::Translation(Vector3(1, 1, 1));
 	if (Window::GetKeyboard()->KeyDown(KEYBOARD_2))particles->at(1)->modelMatrix = particles->at(1)->modelMatrix * Matrix4::Translation(Vector3(1, 1, 1));
-
+	if (Window::GetKeyboard()->KeyDown(KEYBOARD_UP))tesselationLevel = tesselationLevel == 64 ? 64 : tesselationLevel + 1;
+	if (Window::GetKeyboard()->KeyDown(KEYBOARD_DOWN))tesselationLevel = tesselationLevel == 1 ? 1 : tesselationLevel-1;
+	
 	camera->UpdateCamera(dt);
 	viewMatrix = camera->BuildViewMatrix();
 	glBindBuffer(GL_UNIFORM_BUFFER, matrixUBO);
@@ -167,7 +189,10 @@ Matrix4 Renderer::GenerateTransposedMatrix(Particle* p) {
 void Renderer::RenderParticles() {
 	
 	BindShader(particleShader);
-	glUniform1i(glGetUniformLocation(shader->GetProgram(), "particleTex"), 0);
+	glBindBuffer(GL_UNIFORM_BUFFER, matrixUBO);
+	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(Matrix4), &(modelMatrix.values));
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+	glUniform1i(glGetUniformLocation(particleShader->GetProgram(), "particleTex"), 0);
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, particleTexture);
 	
@@ -230,9 +255,8 @@ void Renderer::RenderParticles() {
 	glVertexAttribPointer(6, sizeof(float), GL_FLOAT, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(6);
 	glVertexAttribDivisor(6, 1);
-
+	
 	glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, particleIndex);
-
 	
 
 }
@@ -255,5 +279,32 @@ void Renderer::RenderScene() {
 	SetShaderLight(*light);
 	heightMap->Draw();
 	RenderParticles();
+
+	RenderGrass();
+}
+
+void Renderer::RenderGrass() {
+	BindShader(grassShader);
+	/*glBindBuffer(GL_UNIFORM_BUFFER, matrixUBO);
+	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(Matrix4), &(grassQuad->modelMatrix.values));
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+	glBindVertexArray(grassQuad->GetVAO());
+	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+	glBindVertexArray(0);
+	return;*/
+	
+	
+	glPatchParameteri(GL_PATCH_VERTICES, 4);
+	glUniform1i(glGetUniformLocation(grassShader->GetProgram(), "tesselationLevel"), tesselationLevel);
+
+	glBindBuffer(GL_UNIFORM_BUFFER, matrixUBO);
+	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(Matrix4), &(grassQuad->modelMatrix.values));
+	glBufferSubData(GL_UNIFORM_BUFFER, sizeof(Matrix4), sizeof(Matrix4), &(viewMatrix.values));
+	glBufferSubData(GL_UNIFORM_BUFFER, 2*sizeof(Matrix4), sizeof(Matrix4), &(projMatrix.values));
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+	glBindVertexArray(grassQuad->GetVAO());
+	glDrawArrays(GL_PATCHES, 0, 4);
+	glBindVertexArray(0);
 }
 

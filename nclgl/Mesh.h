@@ -84,7 +84,9 @@ public:
 	bool GetSubMesh(const std::string& name, const SubMesh* s) const;
 
 	static Mesh* GenerateTriangle();
+	static Mesh* GenerateTriangleWithIndices();
 	static Mesh* GenerateQuad();
+	static Mesh* GenerateQuadWithIndices();
 	static Mesh* GenerateQuad(std::vector<Vector2> positions);
 
 	Matrix4 modelMatrix;

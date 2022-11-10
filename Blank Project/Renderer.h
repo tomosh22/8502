@@ -8,7 +8,7 @@ class Light;
 class Shader;
 class Particle;
 
-#define MAX_PARTICLES 10000000
+#define MAX_PARTICLES 1000000
 class Renderer :
     public OGLRenderer
 {
@@ -24,6 +24,8 @@ public:
     void UpdateParticles(float dt);
     void GenerateParticles(float dt, Vector3 position, int radius);
     Matrix4 GenerateTransposedMatrix(Particle* p);
+
+    void RenderGrass();
     
 protected:
     HeightMap* heightMap;
@@ -65,5 +67,10 @@ protected:
     std::array<std::array<float, 4>, MAX_PARTICLES>* column2s;
     std::array<std::array<float, 4>, MAX_PARTICLES>* column3s;
     std::array<std::array<float, 4>, MAX_PARTICLES>* coloursGPU;
+
+    Shader* grassShader;
+    Mesh* grassQuad;
+
+    int tesselationLevel;
 };
 
