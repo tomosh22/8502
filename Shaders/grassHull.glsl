@@ -1,5 +1,5 @@
 #version 410 core
-layout (quads, ccw) in;
+layout (quads,ccw, point_mode) in;
 
 layout(std140) uniform matrices{
 	mat4 modelMatrix;
@@ -9,6 +9,7 @@ layout(std140) uniform matrices{
 };
 
 
+out int idOut;
 
 void main() {  
 	mat4 mvp = projMatrix*viewMatrix*modelMatrix;
@@ -29,7 +30,6 @@ void main() {
 		vec4 p1 = mix(gl_in[1].gl_Position,gl_in[3].gl_Position,gl_TessCoord.x);
 		pos = mix(p0,p1,gl_TessCoord.y);
 	}
-	
 	gl_Position = pos;
 
 }  

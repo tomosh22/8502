@@ -8,5 +8,5 @@ in Vertex{
 
 out vec4 fragColour;
 void main(void){
-	fragColour = vec4(0,1,0,1);
+	fragColour = IN.colour;
 }

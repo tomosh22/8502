@@ -6,14 +6,15 @@
 Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	//glClearColor(0.2, 0.4, 0.2, 1);
+	timePassed = 0;
 	srand(time(0));
 	particleTexture = SOIL_load_OGL_texture(TEXTUREDIR"flame_particle.png", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 	
-	grassShader = new Shader("grassVertex.glsl", "grassFragment.glsl","","","");
+	grassShader = new Shader("grassVertex.glsl", "grassFragment.glsl","grassGeometry.glsl","grassDomain.glsl","grassHull.glsl");
 	if (!grassShader->LoadSuccess()) {
 		return;
 	}
-	grassQuad = Mesh::GenerateQuad();
+	grassQuad = Mesh::GenerateQuadWithIndices();
 	grassQuad->modelMatrix = grassQuad->modelMatrix * Matrix4::Translation(Vector3(50, 50, -100));
 	grassQuad->modelMatrix = grassQuad->modelMatrix * Matrix4::Scale(Vector3(50, 50, 50));
 	grassQuad->modelMatrix = grassQuad->modelMatrix * Matrix4::Rotation(90,Vector3(1, 0, 0));
@@ -70,6 +71,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	glBindBuffer(GL_UNIFORM_BUFFER, matrixUBO);
 	glUniformBlockBinding(shader->GetProgram(), glGetUniformBlockIndex(shader->GetProgram(), "matrices"), 0);
 	glUniformBlockBinding(particleShader->GetProgram(), glGetUniformBlockIndex(particleShader->GetProgram(), "matrices"), 0);
+	glUniformBlockBinding(grassShader->GetProgram(), glGetUniformBlockIndex(grassShader->GetProgram(), "matrices"), 0);
 	glBindBufferBase(GL_UNIFORM_BUFFER, 0, matrixUBO);
 	glBufferData(GL_UNIFORM_BUFFER, 4 * sizeof(Matrix4), NULL, GL_STATIC_DRAW);
 
@@ -149,7 +151,8 @@ void Renderer::UpdateParticles(float dt) {
 }
 
 void Renderer::UpdateScene(float dt) {
-	std::cout << (float)1 / dt << " fps\n" << particleIndex << " particles\n";
+	timePassed += dt;
+	//std::cout << (float)1 / dt << " fps\n" << particleIndex << " particles\n";
 	if (Window::GetKeyboard()->KeyDown(KEYBOARD_0)) { delete heightMap; heightMap = new HeightMap(); }
 	if (Window::GetKeyboard()->KeyDown(KEYBOARD_1))particles->at(0)->modelMatrix = particles->at(0)->modelMatrix * Matrix4::Translation(Vector3(1, 1, 1));
 	if (Window::GetKeyboard()->KeyDown(KEYBOARD_2))particles->at(1)->modelMatrix = particles->at(1)->modelMatrix * Matrix4::Translation(Vector3(1, 1, 1));
@@ -162,7 +165,7 @@ void Renderer::UpdateScene(float dt) {
 	glBufferSubData(GL_UNIFORM_BUFFER, sizeof(Matrix4), sizeof(Matrix4), &(viewMatrix.values));
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 	UpdateParticles(dt);
-	GenerateParticles(dt,Vector3(0,0,0),100);
+	GenerateParticles(dt,Vector3(-50,0,-100),100);
 	
 }
 
@@ -296,7 +299,7 @@ void Renderer::RenderGrass() {
 	
 	glPatchParameteri(GL_PATCH_VERTICES, 4);
 	glUniform1i(glGetUniformLocation(grassShader->GetProgram(), "tesselationLevel"), tesselationLevel);
-
+	glUniform1f(glGetUniformLocation(grassShader->GetProgram(), "time"), timePassed);
 	glBindBuffer(GL_UNIFORM_BUFFER, matrixUBO);
 	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(Matrix4), &(grassQuad->modelMatrix.values));
 	glBufferSubData(GL_UNIFORM_BUFFER, sizeof(Matrix4), sizeof(Matrix4), &(viewMatrix.values));

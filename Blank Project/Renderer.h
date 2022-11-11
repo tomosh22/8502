@@ -8,7 +8,7 @@ class Light;
 class Shader;
 class Particle;
 
-#define MAX_PARTICLES 1000000
+#define MAX_PARTICLES 100000
 class Renderer :
     public OGLRenderer
 {
@@ -72,5 +72,7 @@ protected:
     Mesh* grassQuad;
 
     int tesselationLevel;
+    
+    float timePassed;
 };
 
