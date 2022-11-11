@@ -12,6 +12,8 @@ in vec3 position;
 
 
 void main(void){
-	mat4 mvp = projMatrix*viewMatrix*modelMatrix;
+	//mat4 mvp = projMatrix*viewMatrix*modelMatrix;
+
+
 	gl_Position = vec4(position, 1.0);
 }

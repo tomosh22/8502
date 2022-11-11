@@ -91,6 +91,7 @@ public:
 
 	Matrix4 modelMatrix;
 	GLuint GetVAO() { return arrayObject; }
+	unsigned int* GetIndices() { return indices; }
 protected:
 	void	BufferData();
 	void GenerateNormals();

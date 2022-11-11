@@ -11,9 +11,9 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	if (!shader->LoadSuccess()) {
 		return;
 	}
-	mesh = Mesh::LoadFromMeshFile("wizard_weapon_macanim.msh");
-	anim = new MeshAnimation("wizard_weapon_macanim.anm");
-	material = new MeshMaterial("wizard_weapon_macanim.mat");
+	mesh = Mesh::LoadFromMeshFile("MeshLowPolyGround.msh");
+	//anim = new MeshAnimation("wizard_weapon_macanim.anm");
+	material = new MeshMaterial("MeshLowPolyGround.mat");
 
 	for (int i = 0; i < mesh->GetSubMeshCount(); i++)
 	{
@@ -42,6 +42,7 @@ void Renderer::UpdateScene(float dt){
 	viewMatrix = camera->BuildViewMatrix();
 	frameTime -= dt;
 	//std::cout << frameTime / (1/anim->GetFrameRate()) << '\n';
+	return;
 	while (frameTime < 0.0f) {
 		currentFrame = (currentFrame + 1) % anim->GetFrameCount();
 		frameTime += 1.0f / anim->GetFrameRate();

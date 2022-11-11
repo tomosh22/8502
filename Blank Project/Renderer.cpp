@@ -4,7 +4,7 @@
 #include "../nclgl/HeightMap.h"
 #include "../nclgl/Particle.h"
 Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
-	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	//glClearColor(0.2, 0.4, 0.2, 1);
 	timePassed = 0;
 	srand(time(0));
@@ -156,7 +156,7 @@ void Renderer::UpdateScene(float dt) {
 	if (Window::GetKeyboard()->KeyDown(KEYBOARD_0)) { delete heightMap; heightMap = new HeightMap(); }
 	if (Window::GetKeyboard()->KeyDown(KEYBOARD_1))particles->at(0)->modelMatrix = particles->at(0)->modelMatrix * Matrix4::Translation(Vector3(1, 1, 1));
 	if (Window::GetKeyboard()->KeyDown(KEYBOARD_2))particles->at(1)->modelMatrix = particles->at(1)->modelMatrix * Matrix4::Translation(Vector3(1, 1, 1));
-	if (Window::GetKeyboard()->KeyDown(KEYBOARD_UP))tesselationLevel = tesselationLevel == 64 ? 64 : tesselationLevel + 1;
+	if (Window::GetKeyboard()->KeyDown(KEYBOARD_UP))tesselationLevel = tesselationLevel == 8 ? 8 : tesselationLevel + 1;
 	if (Window::GetKeyboard()->KeyDown(KEYBOARD_DOWN))tesselationLevel = tesselationLevel == 1 ? 1 : tesselationLevel-1;
 	
 	camera->UpdateCamera(dt);
@@ -281,9 +281,27 @@ void Renderer::RenderScene() {
 	glUniform3fv(glGetUniformLocation(shader->GetProgram(), "cameraPos"), 1, (float*)&camera->GetPosition());
 	SetShaderLight(*light);
 	heightMap->Draw();
-	RenderParticles();
+
+	
+
+
+	//RenderParticles();
 
 	RenderGrass();
+	//return;
+	BindShader(grassShader);
+	glPatchParameteri(GL_PATCH_VERTICES, 3);
+	glUniform1i(glGetUniformLocation(grassShader->GetProgram(), "tesselationLevel"), tesselationLevel);
+	glUniform1f(glGetUniformLocation(grassShader->GetProgram(), "time"), timePassed);
+	glBindBuffer(GL_UNIFORM_BUFFER, matrixUBO);
+	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(Matrix4), &(modelMatrix.values));
+	glBufferSubData(GL_UNIFORM_BUFFER, sizeof(Matrix4), sizeof(Matrix4), &(viewMatrix.values));
+	glBufferSubData(GL_UNIFORM_BUFFER, 2 * sizeof(Matrix4), sizeof(Matrix4), &(projMatrix.values));
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+	glBindVertexArray(heightMap->GetVAO());
+	//glDrawArrays(GL_PATCHES, 0, heightMap->GetHeightMapSize().x * heightMap->GetHeightMapSize().z / 42);
+	glDrawElements(GL_PATCHES, heightMap->GetHeightMapSize().x * heightMap->GetHeightMapSize().z / 6, GL_UNSIGNED_INT, 0);
+	glBindVertexArray(0);
 }
 
 void Renderer::RenderGrass() {
@@ -297,7 +315,7 @@ void Renderer::RenderGrass() {
 	return;*/
 	
 	
-	glPatchParameteri(GL_PATCH_VERTICES, 4);
+	glPatchParameteri(GL_PATCH_VERTICES, 3);
 	glUniform1i(glGetUniformLocation(grassShader->GetProgram(), "tesselationLevel"), tesselationLevel);
 	glUniform1f(glGetUniformLocation(grassShader->GetProgram(), "time"), timePassed);
 	glBindBuffer(GL_UNIFORM_BUFFER, matrixUBO);
@@ -307,7 +325,8 @@ void Renderer::RenderGrass() {
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
 	glBindVertexArray(grassQuad->GetVAO());
-	glDrawArrays(GL_PATCHES, 0, 4);
+	//glDrawArrays(GL_PATCHES, 0, 4);
+	glDrawElements(GL_PATCHES, 999,GL_UNSIGNED_INT, 0);
 	glBindVertexArray(0);
 }
 
