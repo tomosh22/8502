@@ -1,20 +1,31 @@
 #version 330 core
 #extension GL_ARB_bindless_texture : enable
 
-layout(bindless_sampler) uniform sampler2D diffuseTex;
+uniform sampler2D reflectTex;
+uniform sampler2D refractTex;
 uniform int useTexture;
+uniform float blendFactor;
 
 in Vertex {
-	vec2 texCoord;
-	vec4 jointWeights;
-	//vec4 colour;
+	vec4 clipSpace;
+	//vec4 jointWeights;
+	vec4 colour;
 	//float height;
 } IN;
 
 out vec4 fragColour;
 void main(void){
 	if(true){
-		fragColour = texture(diffuseTex, IN.texCoord);
+		vec2 texCoord = (IN.clipSpace.xy / IN.clipSpace.w) / 2 + 0.5;
+		//texCoord -= vec2(0.02, 0.02);
+		
+		//texCoord = clamp(texCoord,0.001, 0.999);
+		//if (texCoord.x < 0) { texCoord.x = 0.0; }
+		vec4 reflectColour = texture(reflectTex, vec2(texCoord.x,1-texCoord.y));
+		fragColour = mix(reflectColour,texture(refractTex, texCoord),blendFactor);
+		fragColour += vec4(-0.1, 0, 0.1, 0);
+		//fragColour = vec4(texCoord + vec2(0.5,0.5), 0, 1);
+		//fragColour = vec4(1, 0, 0, 1);
 	}
 	else{
 		//fragColour = IN.colour;

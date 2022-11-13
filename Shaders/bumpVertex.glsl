@@ -3,7 +3,8 @@
 //uniform mat4 modelMatrix;
 //uniform mat4 viewMatrix;
 //uniform mat4 projMatrix;
-
+uniform int clipHeight;
+uniform int clipping;
 layout(std140) uniform matrices{
 	mat4 modelMatrix;
 	mat4 viewMatrix;
@@ -27,6 +28,8 @@ out Vertex{
 } OUT;
 
 void main(void){
+	vec4 plane = vec4(0, -1, 0, clipHeight);
+	gl_ClipDistance[0] = clipping * dot(modelMatrix * vec4(position, 1.0),plane);
 	/*mat4 modelMatrix = matrices.modelMatrix;
 	mat4 viewMatrix = matrices.viewMatrix;
 	mat4 projMatrix = matrices.projMatrix;*/

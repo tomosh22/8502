@@ -29,6 +29,12 @@ public:
 	float GetRoll() const { return roll; }
 	void SetRoll(float r) { roll = r; }
 
+	void GoUnderwater(int waterHeight) {
+		pitch = - pitch;
+		position.y -= waterHeight;
+		position.y = -position.y;
+		position.y += waterHeight;
+	};
 protected:
 	float yaw, pitch,roll;
 	Vector3 position;

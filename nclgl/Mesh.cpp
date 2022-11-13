@@ -562,7 +562,7 @@ Mesh* Mesh::GenerateQuad(std::vector<Vector2> positions) {
 
 	m->vertices = new Vector3[m->numVertices];
 	m->textureCoords = new Vector2[m->numVertices];
-	m->colours = new Vector4[m->numVertices];
+	//m->colours = new Vector4[m->numVertices];
 	m->normals = new Vector3[m->numVertices];
 	m->tangents = new Vector4[m->numVertices];
 
@@ -578,7 +578,7 @@ Mesh* Mesh::GenerateQuad(std::vector<Vector2> positions) {
 
 	for (int i = 0; i < 4; i++)
 	{
-		m->colours[i] = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+		//m->colours[i] = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
 		m->normals[i] = Vector3(0.0f, 0.0f, -1.0f);
 		m->tangents[i] = Vector4(1.0f, 0.0f, 0.0f, 1.0f);
 	}

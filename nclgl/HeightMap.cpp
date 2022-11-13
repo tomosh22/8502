@@ -3,7 +3,7 @@
 
 
 
-HeightMap::HeightMap(const std::string& name) {
+HeightMap::HeightMap(const std::string& name,bool perlin) {
 	int iWidth, iHeight, iChans;
 	unsigned char* data = SOIL_load_image(name.c_str(), &iWidth, &iHeight, &iChans, 1);
 	if (!data) {
@@ -17,9 +17,12 @@ HeightMap::HeightMap(const std::string& name) {
 	indices = new GLuint[numIndices];
 	Vector3 vertexScale = Vector3(16, 1, 16);
 	Vector2 textureScale = Vector2(1 / 16.0f, 1 / 16.0f);
-
+	srand(time(0));
+	float seed = rand();
 	int offset;
 	float shadow;
+	int freq = 16;
+	int amp = 10;
 	for (int z = 0; z < iHeight; z++)
 	{
 		for (int x = 0; x < iWidth; x++)
@@ -27,7 +30,15 @@ HeightMap::HeightMap(const std::string& name) {
 			offset = (z * iWidth) + x;
 			shadow = ((int)data[offset]) / 255.0f;
 			colours[offset] = Vector4(shadow, shadow, shadow, 1.0f);
-			vertices[offset] = Vector3(x, data[offset], z) * vertexScale;
+			vertices[offset] = Vector3(x, data[offset] * 10, z) * vertexScale;
+			if (perlin) {
+				int y = 0;
+				y += db::perlin((float)z / freq, (float)x / freq, seed) * amp;
+				y += db::perlin((float)z / (freq * 2), (float)x / (freq * 2), seed) * amp * 2;
+				y += db::perlin((float)z / (freq * 4), (float)x / (freq * 4), seed) * amp * 4;
+				y += db::perlin((float)z / (freq * 8), (float)x / (freq * 8), seed) * amp * 8;
+				vertices[offset].y += y;
+			}
 			textureCoords[offset] = Vector2(x, z) * textureScale;
 		}
 	}
@@ -57,6 +68,7 @@ HeightMap::HeightMap(const std::string& name) {
 	heightMapSize.y = vertexScale.y * 255.0f;
 	heightMapSize.z = vertexScale.z * (iHeight - 1);
 }
+
 
 
 HeightMap::HeightMap() {

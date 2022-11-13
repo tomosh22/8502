@@ -7,6 +7,8 @@ class Camera;
 class Light;
 class Shader;
 class Particle;
+class MeshMaterial;
+class MeshAnimation;
 
 #define MAX_PARTICLES 100000
 class Renderer :
@@ -26,6 +28,14 @@ public:
     Matrix4 GenerateTransposedMatrix(Particle* p);
 
     void RenderGrass();
+
+    void SetupWaterFBOs();
+    void RenderReflection();
+
+    void RenderTrees();
+    void RenderSpiders();
+
+    void DrawSkybox();
     
 protected:
     HeightMap* heightMap;
@@ -74,5 +84,38 @@ protected:
     int tesselationLevel;
     
     float timePassed;
+
+
+    GLuint reflectionFBO;
+    GLuint reflectionColour;
+    GLuint reflectionDepth;
+
+    GLuint refractionFBO;
+    GLuint refractionColour;
+    GLuint refractionDepth;
+    GLuint refractionDepthTex;
+
+    Mesh* guiMapQuad;
+    Shader* guiShader;
+    Mesh* waterQuad;
+    float blendFactor;
+    int waterHeight;
+
+    Mesh* treeMesh;
+    MeshMaterial* treeMat;
+    std::vector<GLuint> treeTextures;
+    
+    Mesh* spiderMesh;
+    MeshMaterial* spiderMat;
+    std::vector<GLuint> spiderTextures;
+    MeshAnimation* spiderAnim;
+    int currentFrame;
+    float frameTime;
+
+    Shader* animShader;
+
+    GLuint cubeMap;
+    Mesh* skyboxQuad;
+    Shader* skyboxShader;
 };
 
