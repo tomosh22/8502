@@ -5,23 +5,28 @@
 #include "../nclgl/Particle.h"
 #include "../nclgl/MeshMaterial.h"
 #include "../nclgl/MeshAnimation.h"
+#include "imgui.h"
+#include "imgui_impl_opengl3.h"
+#include "imgui_impl_win32.h"
+
 Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
-	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	
 	//glClearColor(0.2, 0.4, 0.2, 1);
 	
 	timePassed = 0;
 	srand(time(0));
-	particleTexture = SOIL_load_OGL_texture(TEXTUREDIR"flame_particle.png", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	particleTexture = SOIL_load_OGL_texture(TEXTUREDIR"particle.tga", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 	
 	grassShader = new Shader("grassVertex.glsl", "grassFragment.glsl","grassGeometry.glsl","grassDomain.glsl","grassHull.glsl");
 	if (!grassShader->LoadSuccess()) {
 		return;
 	}
 	grassQuad = Mesh::GenerateQuadWithIndices();
-	grassQuad->modelMatrix = grassQuad->modelMatrix * Matrix4::Translation(Vector3(50, 50, -100));
-	grassQuad->modelMatrix = grassQuad->modelMatrix * Matrix4::Scale(Vector3(50, 50, 50));
+	grassQuad->modelMatrix = grassQuad->modelMatrix * Matrix4::Translation(Vector3(3500, 1000, 3800));
+	grassQuad->modelMatrix = grassQuad->modelMatrix * Matrix4::Scale(Vector3(500, 500, 500));
 	grassQuad->modelMatrix = grassQuad->modelMatrix * Matrix4::Rotation(90,Vector3(1, 0, 0));
-	tesselationLevel = 1;
+	tesselationLevel = 16;
+	noiseTex = SOIL_load_OGL_texture(TEXTUREDIR"noise.png", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 	
 	particleTime = 0;
 	particleShader = new Shader("particleVertex.glsl", "particleFragment.glsl");
@@ -87,8 +92,8 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	
 
 	heightMap = new HeightMap(TEXTUREDIR"heightmap.png",true);
-	texture = SOIL_load_OGL_texture(TEXTUREDIR"Barren Reds.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
-	bumpMap = SOIL_load_OGL_texture(TEXTUREDIR"Barren RedsDOT3.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	texture = SOIL_load_OGL_texture(TEXTUREDIR"red_laterite_soil_stones_diff_4k.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	bumpMap = SOIL_load_OGL_texture(TEXTUREDIR"red_laterite_soil_stones_nor_gl_4k.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 	shader = new Shader("bumpVertex.glsl", "bumpFragment.glsl");
 	if (!shader->LoadSuccess() || !particleShader->LoadSuccess() || !texture || !bumpMap) {
 		return;
@@ -99,8 +104,8 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	SetTextureRepeating(bumpMap, true);
 
 	Vector3 heightMapSize = heightMap->GetHeightMapSize();
-	camera = new Camera(0, 0, Vector3(50, 50, 50));
-	light = new Light(heightMapSize * Vector3(0.5f, 1.5f, 0.5f), Vector4(1, 0.9, 0.5, 1), Vector4(1, 0.9, 0.5, 1), heightMapSize.x * 0.5f);
+	camera = new Camera(0, 0, heightMapSize * Vector3(0.7f, 10, 0.7f));
+	light = new Light(heightMapSize * Vector3(0.7f, 10, 0.7f), Vector4(0.8, 0.6, 0.8, 1), Vector4(0, 1, 0, 1), heightMapSize.x * 2.5f);
 	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / height, 45.0f);
 	modelMatrix = Matrix4();
 	modelMatrix.ToIdentity();
@@ -149,11 +154,19 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	guiShader = new Shader("texturedVertex.glsl", "texturedFragment.glsl");
 	glUniformBlockBinding(guiShader->GetProgram(), glGetUniformBlockIndex(guiShader->GetProgram(), "matrices"), 0);
 	blendFactor = 0.5;
+	if (!guiShader->LoadSuccess()) {
+		return;
+	}
+
+	waterTex= SOIL_load_OGL_texture(TEXTUREDIR"Water 0341.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	waterNormal = SOIL_load_OGL_texture(TEXTUREDIR"Water 0341normal.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	SetTextureRepeating(waterTex, true);
+	SetTextureRepeating(waterNormal, true);
 
 	cubeMap = SOIL_load_OGL_cubemap(
-		TEXTUREDIR"rusted_west.jpg", TEXTUREDIR"rusted_east.jpg",
-		TEXTUREDIR"rusted_up.jpg", TEXTUREDIR"CosmicCoolCloudBottom.jpg",
-		TEXTUREDIR"rusted_south.jpg", TEXTUREDIR"CosmicCoolCloudFront.jpg",
+		TEXTUREDIR"px.jpg", TEXTUREDIR"nx.jpg",
+		TEXTUREDIR"py.jpg", TEXTUREDIR"ny.jpg",
+		TEXTUREDIR"pz.jpg", TEXTUREDIR"nz.jpg",
 		SOIL_LOAD_RGB, SOIL_CREATE_NEW_ID, 0);
 	if (!cubeMap) {
 		return;
@@ -167,6 +180,15 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO();
+	ImGui::StyleColorsDark();
+	ImGui_ImplWin32_Init(parent.GetHandle());
+	ImGui_ImplOpenGL3_Init("#version 330");
+	
+
 	init = true;
 }
 
@@ -205,21 +227,21 @@ void Renderer::DrawSkybox() {
 
 void Renderer::GenerateParticles(float dt, Vector3 position, int radius) {
 	particleTime += dt;
-		for (int x = 0; x < 100; x++)
+		for (int x = 0; x < 10; x++)
 		{
 			if (particleIndex == MAX_PARTICLES - 1) {
 				return;
 			}
 			particles->at(particleIndex++)->InitParticle(
-				position + Vector3((rand() % radius) - radius / 2, (rand() % radius) - radius / 2, (rand() % radius) - radius / 2),
-				Vector3((rand() % 50) - 25, -100 - rand() % 50, (rand() % 50) - 25),
+				position + Vector3((rand() % radius) - radius / 2, 0, (rand() % radius) - radius / 2),
+				Vector3((rand() % 50) - 25, -250 - rand() % 50, (rand() % 50) - 25),
 				Vector3(0, -50, 0),
 				3,
 				Vector4(0, 0, 1, 1),
 				Vector4(0, 1, 1, 1),
 				false,
-				Vector3(5, 5, 5),
-				Vector3(3, 3, 3),
+				Vector3(100, 100, 100),
+				Vector3(0,0,0),
 				false
 			);
 			particleTime = 0;
@@ -251,7 +273,7 @@ void Renderer::UpdateScene(float dt) {
 	if (Window::GetKeyboard()->KeyDown(KEYBOARD_0)) { delete heightMap; heightMap = new HeightMap(TEXTUREDIR"heightmap.png",true); }
 	if (Window::GetKeyboard()->KeyDown(KEYBOARD_1))particles->at(0)->modelMatrix = particles->at(0)->modelMatrix * Matrix4::Translation(Vector3(1, 1, 1));
 	if (Window::GetKeyboard()->KeyDown(KEYBOARD_2))particles->at(1)->modelMatrix = particles->at(1)->modelMatrix * Matrix4::Translation(Vector3(1, 1, 1));
-	if (Window::GetKeyboard()->KeyDown(KEYBOARD_UP))tesselationLevel = tesselationLevel == 8 ? 8 : tesselationLevel + 1;
+	if (Window::GetKeyboard()->KeyDown(KEYBOARD_UP))tesselationLevel = tesselationLevel == 32 ? 32 : tesselationLevel + 1;
 	if (Window::GetKeyboard()->KeyDown(KEYBOARD_DOWN))tesselationLevel = tesselationLevel == 1 ? 1 : tesselationLevel-1;
 
 	if (Window::GetKeyboard()->KeyDown(KEYBOARD_UP))blendFactor = blendFactor >= 1.0f ? 1.0f : blendFactor + 0.01f;
@@ -259,11 +281,21 @@ void Renderer::UpdateScene(float dt) {
 	
 	camera->UpdateCamera(dt);
 	viewMatrix = camera->BuildViewMatrix();
+	//std::cout << camera->GetPosition() << '\n';
 	glBindBuffer(GL_UNIFORM_BUFFER, matrixUBO);
 	glBufferSubData(GL_UNIFORM_BUFFER, sizeof(Matrix4), sizeof(Matrix4), &(viewMatrix.values));
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
-	//UpdateParticles(dt);
-	//GenerateParticles(dt,Vector3(-50,0,-100),100);
+	GenerateParticles(dt, Vector3(3500, 950, 3800), 1000);
+	UpdateParticles(dt);
+
+	//std::cout << '\n';
+	std::sort(particles->begin(), particles->begin() + particleIndex, [&](const Particle* a, const Particle* b) {
+		Vector3 aPos = a->modelMatrix.GetPositionVector();
+		Vector3 bPos = b->modelMatrix.GetPositionVector();
+		Vector3 camPos = viewMatrix.GetPositionVector();
+		return Vector3(aPos - camPos).Length() < Vector3(bPos - camPos).Length();
+		});
+
 	frameTime -= dt;
 	while (frameTime < 0.0f) {
 		currentFrame = (currentFrame + 1) % spiderAnim->GetFrameCount();
@@ -406,6 +438,9 @@ void Renderer::RenderSpiders() {
 
 void Renderer::RenderScene() {
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	
+
+
 	glBindBuffer(GL_UNIFORM_BUFFER, matrixUBO);
 	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(Matrix4), &(modelMatrix.values));
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
@@ -428,11 +463,26 @@ void Renderer::RenderScene() {
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	RenderSpiders();
 
-	//RenderParticles();
-
-	//RenderGrass();
+	
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	//glDisable(GL_CULL_FACE);
+	RenderGrass();
+	//glEnable(GL_CULL_FACE);
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	RenderReflection();
+	RenderParticles();
+	ImGui_ImplOpenGL3_NewFrame();
+	ImGui_ImplWin32_NewFrame();
+	ImGui::NewFrame();
+	//ImGui::ShowDemoWindow((bool*)true);
+	ImGui::SetNextWindowSize(ImVec2(300, 100));
+	ImGui::Begin("hi");
+	ImGui::SliderInt("Tesselation", &tesselationLevel, 1, 32);
+	ImGui::End();
+	ImGui::EndFrame();
+	ImGui::Render();
+	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 	return;
 
@@ -450,10 +500,16 @@ void Renderer::RenderScene() {
 	//glDrawArrays(GL_PATCHES, 0, heightMap->GetHeightMapSize().x * heightMap->GetHeightMapSize().z / 42);
 	glDrawElements(GL_PATCHES, heightMap->GetHeightMapSize().x * heightMap->GetHeightMapSize().z / 6, GL_UNSIGNED_INT, 0);
 	glBindVertexArray(0);
+
+
+	
 }
 
 void Renderer::RenderGrass() {
 	BindShader(grassShader);
+	glUniform1i(glGetUniformLocation(grassShader->GetProgram(), "noiseTex"), 0);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, noiseTex);
 	/*glBindBuffer(GL_UNIFORM_BUFFER, matrixUBO);
 	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(Matrix4), &(grassQuad->modelMatrix.values));
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
@@ -569,6 +625,8 @@ void Renderer::RenderReflection() {
 	heightMap->Draw();
 	
 	RenderSpiders();
+	RenderGrass();
+	RenderParticles();
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, texture);
 	BindShader(shader);
@@ -590,6 +648,7 @@ void Renderer::RenderReflection() {
 	glUniform1i(glGetUniformLocation(shader->GetProgram(), "clipping"), 0);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	BindShader(guiShader);
+	SetShaderLight(*light);
 	glUniform1f(glGetUniformLocation(guiShader->GetProgram(), "blendFactor"), blendFactor);
 	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(Matrix4), &(waterQuad->modelMatrix.values));
 	glUniform1i(glGetUniformLocation(guiShader->GetProgram(), "reflectTex"), 0);
@@ -598,6 +657,13 @@ void Renderer::RenderReflection() {
 	glUniform1i(glGetUniformLocation(guiShader->GetProgram(), "refractTex"), 1);
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, refractionColour);
+	glUniform1i(glGetUniformLocation(guiShader->GetProgram(), "waterTex"), 2);
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, waterTex);
+	glUniform1i(glGetUniformLocation(guiShader->GetProgram(), "waterNormal"), 3);
+	glActiveTexture(GL_TEXTURE3);
+	glBindTexture(GL_TEXTURE_2D, waterNormal);
+	glUniform1f(glGetUniformLocation(guiShader->GetProgram(), "time"), timePassed);
 	waterQuad->Draw();
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }

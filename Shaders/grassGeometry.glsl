@@ -1,6 +1,6 @@
-#version 330 core
+#version 400 core
 layout (points) in;
-layout (triangle_strip, max_vertices = 12) out;
+layout (line_strip, max_vertices = 100) out;
 
 layout(std140) uniform matrices{
 	mat4 modelMatrix;
@@ -9,10 +9,12 @@ layout(std140) uniform matrices{
 	mat4 modelViewMatrix;
 };
 uniform float time;
+
 out Vertex{
 	vec4 colour;
 } OUT;
 
+//found this on stackoverflow, absolutely no idea why it works
 float rand(vec2 co) {
     return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
 }
@@ -49,114 +51,24 @@ void main() {
     mat4 mvp = projMatrix*viewMatrix*modelMatrix;
     //mat4 mvp = projMatrix*viewMatrix*mv;
     
-    gl_Position = mvp * (gl_in[0].gl_Position + vec4(sin(time)/10,0,-0.5,0));
-    OUT.colour = vec4(0, 1, 0, 1);
-    EmitVertex();
+    vec4 base = modelMatrix * gl_in[0].gl_Position;
+    for (int x = 0; x < 10; x++)
+    {
+        float freq = time + rand(base.xz + 7) / 2;
+        float amp = rand(base.xz + 8)/20 + 0.2;
+        float height = -0.5 + rand(base.xz + 9)/5;
+        //vec4 offset = vec4(sin(freq))
+        gl_Position = mvp * (gl_in[0].gl_Position + vec4(sin(freq) * amp, 0, height, 0));
+        OUT.colour = vec4(rand(base.xz+1), 1 - rand(base.xz + 2) / 10, 0, 1);
+        EmitVertex();
 
-    gl_Position = mvp * (gl_in[0].gl_Position + vec4(-0.025,-0.025,0,0));
-    OUT.colour = darkGreen;
-    EmitVertex();
+        gl_Position = mvp * (gl_in[0].gl_Position + vec4(rand(base.xz+3)/20 + rand(base.xz + 4) / 5, rand(base.xz+5)/20 + rand(base.xz + 6) / 5, 0, 0));
+        OUT.colour = darkGreen;
+        EmitVertex();
+        base += 6;
 
-    gl_Position = mvp * (gl_in[0].gl_Position + vec4(-0.025, 0.025, 0, 0));
-    OUT.colour = darkGreen;
-    EmitVertex();
+        EndPrimitive();
 
-    EndPrimitive();
-
-    gl_Position = mvp * (gl_in[0].gl_Position + vec4(sin(time) / 10, 0, -0.5, 0));
-    OUT.colour = vec4(0, 1, 0, 1);
-    EmitVertex();
-
-    gl_Position = mvp * (gl_in[0].gl_Position + vec4(0.025, -0.025, 0, 0));
-    OUT.colour = darkGreen;
-    EmitVertex();
-
-    gl_Position = mvp * (gl_in[0].gl_Position + vec4(0.025, 0.025, 0, 0));
-    OUT.colour = darkGreen;
-    EmitVertex();
-
-    EndPrimitive();
-
-    gl_Position = mvp * (gl_in[0].gl_Position + vec4(sin(time) / 10, 0, -0.5, 0));
-    OUT.colour = vec4(0, 1, 0, 1);
-    EmitVertex();
-
-    gl_Position = mvp * (gl_in[0].gl_Position + vec4(-0.025, -0.025, 0, 0));
-    OUT.colour = darkGreen;
-    EmitVertex();
-
-    gl_Position = mvp * (gl_in[0].gl_Position + vec4(0.025, -0.025, 0, 0));
-    OUT.colour = darkGreen;
-    EmitVertex();
-
-    EndPrimitive();
-
-    gl_Position = mvp * (gl_in[0].gl_Position + vec4(sin(time) / 10, 0, -0.5, 0));
-    OUT.colour = vec4(0, 1, 0, 1);
-    EmitVertex();
-
-    gl_Position = mvp * (gl_in[0].gl_Position + vec4(-0.025, 0.025, 0, 0));
-    OUT.colour = darkGreen;
-    EmitVertex();
-
-    gl_Position = mvp * (gl_in[0].gl_Position + vec4(0.025, 0.025, 0, 0));
-    OUT.colour = darkGreen;
-    EmitVertex();
-
-    EndPrimitive();
-
-    return;
-
-
-
-
-
-
-
-
-
-
-    //mat4 mvp = projMatrix*viewMatrix*modelMatrix;
-    gl_Position = mvp * gl_in[0].gl_Position;
-    OUT.colour = vec4(1,0,0,1);
-    EmitVertex();
-
-    gl_Position = mvp * gl_in[1].gl_Position;
-    OUT.colour = vec4(1,0,0,1);
-    EmitVertex();
-
-    gl_Position = mvp * gl_in[2].gl_Position;
-    OUT.colour = vec4(1,0,0,1);
-    EmitVertex();
-
-    EndPrimitive();
-
-    gl_Position = mvp * gl_in[0].gl_Position + vec4(0,50,0,0);
-    OUT.colour = vec4(0,1,0,1);
-    EmitVertex();
-
-    gl_Position = mvp * gl_in[1].gl_Position + vec4(0,50,0,0);
-    OUT.colour = vec4(0,1,0,1);
-    EmitVertex();
-
-    gl_Position = mvp * gl_in[2].gl_Position + vec4(0,50,0,0);
-    OUT.colour = vec4(0,1,0,1);
-    EmitVertex();
-
-    EndPrimitive();
-
-    gl_Position = mvp * gl_in[0].gl_Position + vec4(0,100,0,0);
-    OUT.colour = vec4(0,0,1,1);
-    EmitVertex();
-
-    gl_Position = mvp * gl_in[1].gl_Position + vec4(0,100,0,0);
-    OUT.colour = vec4(0,0,1,1);
-    EmitVertex();
-
-    gl_Position = mvp * gl_in[2].gl_Position + vec4(0,100,0,0);
-    OUT.colour = vec4(0,0,1,1);
-    EmitVertex();
-
-    EndPrimitive();
+    }
 
 }  

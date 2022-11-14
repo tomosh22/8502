@@ -37,6 +37,8 @@ void main(void){
 	gl_Position = mvp * vec4(position, 1.0);
 	OUT.texCoord = texCoord;
 	OUT.colour = colour;
+
+
 	mat3 normalMatrix = transpose(inverse(mat3(modelMatrix)));
 	OUT.normal = normalize(normalMatrix * normalize(normal));
 	OUT.worldPos = (modelMatrix * vec4(position, 1)).xyz;

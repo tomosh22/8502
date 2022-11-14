@@ -8,6 +8,6 @@ in Vertex{
 out vec4 fragColour;
 void main(void){
 	vec4 sample = texture(particleTex, IN.texCoord); 
-	if(sample.a < 0.5){discard;}
+	if(sample.a < 0.2){discard;}
 	fragColour = max(sample.r,(max(sample.g,sample.b))) * IN.colour * sample.a;
 }

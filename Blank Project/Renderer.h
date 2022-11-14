@@ -2,6 +2,8 @@
 #include "../nclgl/OGLRenderer.h"
 #include <array>
 #include <stack>
+#include "imgui.h"
+#include "imgui_impl_opengl3.h"
 class HeightMap;
 class Camera;
 class Light;
@@ -10,7 +12,7 @@ class Particle;
 class MeshMaterial;
 class MeshAnimation;
 
-#define MAX_PARTICLES 100000
+#define MAX_PARTICLES 10000
 class Renderer :
     public OGLRenderer
 {
@@ -80,6 +82,7 @@ protected:
 
     Shader* grassShader;
     Mesh* grassQuad;
+    GLuint noiseTex;
 
     int tesselationLevel;
     
@@ -100,6 +103,8 @@ protected:
     Mesh* waterQuad;
     float blendFactor;
     int waterHeight;
+    GLuint waterTex;
+    GLuint waterNormal;
 
     Mesh* treeMesh;
     MeshMaterial* treeMat;
@@ -117,5 +122,7 @@ protected:
     GLuint cubeMap;
     Mesh* skyboxQuad;
     Shader* skyboxShader;
+
+    
 };
 
