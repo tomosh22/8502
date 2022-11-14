@@ -88,6 +88,7 @@ public:
 	static Mesh* GenerateQuad();
 	static Mesh* GenerateQuadWithIndices();
 	static Mesh* GenerateQuad(std::vector<Vector2> positions);
+	static Mesh* GenerateQuad(std::vector<Vector3> positions);
 
 	Matrix4 modelMatrix;
 	GLuint GetVAO() { return arrayObject; }

@@ -39,7 +39,13 @@ public:
 
     void DrawSkybox();
     
+    void ImGui();
+
+    void SetupPortalFBOs();
+    void RenderPortal();
 protected:
+    float frameRate;
+
     HeightMap* heightMap;
     Shader* shader;
     Camera* camera;
@@ -59,6 +65,9 @@ protected:
     int particleIndex;
     GLuint particleTexture;
     Shader* particleShader;
+    float particleLifetime;
+    Vector4 particleStartColour;
+    Vector4 particleEndColour;
 
     float particleTime;
 
@@ -83,6 +92,8 @@ protected:
     Shader* grassShader;
     Mesh* grassQuad;
     GLuint noiseTex;
+    Vector4 grassStartColour;
+    Vector4 grassEndColour;
 
     int tesselationLevel;
     
@@ -105,6 +116,8 @@ protected:
     int waterHeight;
     GLuint waterTex;
     GLuint waterNormal;
+    bool reflectGrass;
+    bool reflectParticles;
 
     Mesh* treeMesh;
     MeshMaterial* treeMat;
@@ -123,6 +136,12 @@ protected:
     Mesh* skyboxQuad;
     Shader* skyboxShader;
 
-    
+    GLuint portalFBO;
+    GLuint portalColour;
+    GLuint portalDepth;
+    Mesh* portalQuad;
+    Mesh* portalViewpointQuad;
+    Shader* portalShader;
+
 };
 

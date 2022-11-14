@@ -12,7 +12,7 @@
 Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	
 	//glClearColor(0.2, 0.4, 0.2, 1);
-	
+	frameRate = 0;
 	timePassed = 0;
 	srand(time(0));
 	particleTexture = SOIL_load_OGL_texture(TEXTUREDIR"particle.tga", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
@@ -26,9 +26,12 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	grassQuad->modelMatrix = grassQuad->modelMatrix * Matrix4::Scale(Vector3(500, 500, 500));
 	grassQuad->modelMatrix = grassQuad->modelMatrix * Matrix4::Rotation(90,Vector3(1, 0, 0));
 	tesselationLevel = 16;
+	grassStartColour = Vector4(0, 0.2, 0, 1);
+	grassEndColour = Vector4(0.8, 0.9, 0, 1);
 	noiseTex = SOIL_load_OGL_texture(TEXTUREDIR"noise.png", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 	
 	particleTime = 0;
+	particleLifetime = 3;
 	particleShader = new Shader("particleVertex.glsl", "particleFragment.glsl");
 	BindShader(particleShader);
 	particles = new std::array<Particle*,MAX_PARTICLES>();
@@ -38,6 +41,8 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	}
 	particleIndex = 0;
 	masterParticle = Mesh::GenerateQuad();
+	particleStartColour = Vector4(0, 0, 1, 1);
+	particleEndColour = Vector4(1, 0, 1, 1);
 
 	column0s = new std::array<std::array<float, 4>, MAX_PARTICLES>();
 	column1s = new std::array<std::array<float, 4>, MAX_PARTICLES>();
@@ -55,7 +60,8 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	if (!animShader->LoadSuccess()) {
 		return;
 	}
-	treeMesh = Mesh::LoadFromMeshFile("P_Bush01.msh");
+
+	/*treeMesh = Mesh::LoadFromMeshFile("P_Bush01.msh");
 	treeMat = new MeshMaterial("P_Bush01.mat");
 	for (int i = 0; i < treeMesh->GetSubMeshCount(); i++)
 	{
@@ -68,10 +74,10 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	}
 	treeMesh->modelMatrix.ToIdentity();
 	treeMesh->modelMatrix = treeMesh->modelMatrix * Matrix4::Translation(Vector3(100, 100, 100));
-	treeMesh->modelMatrix = treeMesh->modelMatrix * Matrix4::Scale(Vector3(200, 200, 200));
+	treeMesh->modelMatrix = treeMesh->modelMatrix * Matrix4::Scale(Vector3(200, 200, 200));*/
 
 
-	spiderMesh = Mesh::LoadFromMeshFile("spider2.msh");
+	/*spiderMesh = Mesh::LoadFromMeshFile("spider2.msh");
 	spiderMat = new MeshMaterial("spider2.mat");
 	spiderAnim = new MeshAnimation("spider2.anm");
 	for (int i = 0; i < spiderMesh->GetSubMeshCount(); i++)
@@ -85,7 +91,24 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	}
 	spiderMesh->modelMatrix.ToIdentity();
 	spiderMesh->modelMatrix = spiderMesh->modelMatrix * Matrix4::Translation(Vector3(2000, 400, 5800));
-	spiderMesh->modelMatrix = spiderMesh->modelMatrix * Matrix4::Scale(Vector3(200, 200, 200));
+	spiderMesh->modelMatrix = spiderMesh->modelMatrix * Matrix4::Scale(Vector3(200, 200, 200));*/
+
+	
+	
+	portalQuad = Mesh::GenerateQuad();
+	portalQuad->modelMatrix.ToIdentity();
+	portalQuad->modelMatrix = portalQuad->modelMatrix * Matrix4::Translation(Vector3(1000, 2000, 8000));
+	portalQuad->modelMatrix = portalQuad->modelMatrix * Matrix4::Scale(Vector3(500, 1000, 500));
+	portalViewpointQuad = Mesh::GenerateQuad();
+	portalViewpointQuad->modelMatrix.ToIdentity();
+	portalViewpointQuad->modelMatrix = portalViewpointQuad->modelMatrix * Matrix4::Translation(Vector3(5000, 2000, 8000));
+	portalViewpointQuad->modelMatrix = portalViewpointQuad->modelMatrix * Matrix4::Scale(Vector3(500, 1000, 500));
+	portalShader = new Shader("portalVertex.glsl", "portalFragment.glsl");
+	if (!portalShader->LoadSuccess()) {
+		return;
+	}
+	SetupPortalFBOs();
+
 
 	currentFrame = 0;
 	frameTime = 0;
@@ -104,7 +127,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	SetTextureRepeating(bumpMap, true);
 
 	Vector3 heightMapSize = heightMap->GetHeightMapSize();
-	camera = new Camera(0, 0, heightMapSize * Vector3(0.7f, 10, 0.7f));
+	camera = new Camera(0, 0, Vector3(1000,2000,8000));
 	light = new Light(heightMapSize * Vector3(0.7f, 10, 0.7f), Vector4(0.8, 0.6, 0.8, 1), Vector4(0, 1, 0, 1), heightMapSize.x * 2.5f);
 	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / height, 45.0f);
 	modelMatrix = Matrix4();
@@ -121,6 +144,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	glUniformBlockBinding(particleShader->GetProgram(), glGetUniformBlockIndex(particleShader->GetProgram(), "matrices"), 0);
 	glUniformBlockBinding(grassShader->GetProgram(), glGetUniformBlockIndex(grassShader->GetProgram(), "matrices"), 0);
 	glUniformBlockBinding(animShader->GetProgram(), glGetUniformBlockIndex(animShader->GetProgram(), "matrices"), 0);
+	glUniformBlockBinding(portalShader->GetProgram(), glGetUniformBlockIndex(portalShader->GetProgram(), "matrices"), 0);
 
 	glBindBufferBase(GL_UNIFORM_BUFFER, 0, matrixUBO);
 	glBufferData(GL_UNIFORM_BUFFER, 4 * sizeof(Matrix4), NULL, GL_STATIC_DRAW);
@@ -150,6 +174,8 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	waterQuad->modelMatrix.ToIdentity();
 	waterQuad->modelMatrix = waterQuad->modelMatrix * Matrix4::Translation(Vector3(0, waterHeight, 0));
 	waterQuad->modelMatrix = waterQuad->modelMatrix * Matrix4::Rotation(90, Vector3(1, 0, 0));
+	reflectGrass = true;
+	reflectParticles = true;
 	
 	guiShader = new Shader("texturedVertex.glsl", "texturedFragment.glsl");
 	glUniformBlockBinding(guiShader->GetProgram(), glGetUniformBlockIndex(guiShader->GetProgram(), "matrices"), 0);
@@ -178,6 +204,11 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	skyboxQuad = Mesh::GenerateQuad();
 	skyboxShader = new Shader("skyboxVertex.glsl", "skyboxFragment.glsl");
 	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+
+
+	
+
+
 
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
@@ -216,6 +247,7 @@ Renderer::~Renderer(void) {
 }
 
 
+
 void Renderer::DrawSkybox() {
 	glDepthMask(GL_FALSE);
 
@@ -236,9 +268,9 @@ void Renderer::GenerateParticles(float dt, Vector3 position, int radius) {
 				position + Vector3((rand() % radius) - radius / 2, 0, (rand() % radius) - radius / 2),
 				Vector3((rand() % 50) - 25, -250 - rand() % 50, (rand() % 50) - 25),
 				Vector3(0, -50, 0),
-				3,
-				Vector4(0, 0, 1, 1),
-				Vector4(0, 1, 1, 1),
+				particleLifetime,
+				particleStartColour,
+				particleEndColour,
 				false,
 				Vector3(100, 100, 100),
 				Vector3(0,0,0),
@@ -269,6 +301,7 @@ void Renderer::UpdateParticles(float dt) {
 
 void Renderer::UpdateScene(float dt) {
 	timePassed += dt;
+	frameRate = 1 / dt;
 	//std::cout << (float)1 / dt << " fps\n" << particleIndex << " particles\n";
 	if (Window::GetKeyboard()->KeyDown(KEYBOARD_0)) { delete heightMap; heightMap = new HeightMap(TEXTUREDIR"heightmap.png",true); }
 	if (Window::GetKeyboard()->KeyDown(KEYBOARD_1))particles->at(0)->modelMatrix = particles->at(0)->modelMatrix * Matrix4::Translation(Vector3(1, 1, 1));
@@ -297,10 +330,12 @@ void Renderer::UpdateScene(float dt) {
 		});
 
 	frameTime -= dt;
-	while (frameTime < 0.0f) {
+
+	//todo uncomment for spider animation
+	/*while (frameTime < 0.0f) {
 		currentFrame = (currentFrame + 1) % spiderAnim->GetFrameCount();
 		frameTime += 1.0f / spiderAnim->GetFrameRate();
-	}
+	}*/
 	
 }
 
@@ -461,7 +496,7 @@ void Renderer::RenderScene() {
 	
 	//RenderTrees();
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	RenderSpiders();
+	//RenderSpiders();
 
 	
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -472,17 +507,12 @@ void Renderer::RenderScene() {
 
 	RenderReflection();
 	RenderParticles();
-	ImGui_ImplOpenGL3_NewFrame();
-	ImGui_ImplWin32_NewFrame();
-	ImGui::NewFrame();
-	//ImGui::ShowDemoWindow((bool*)true);
-	ImGui::SetNextWindowSize(ImVec2(300, 100));
-	ImGui::Begin("hi");
-	ImGui::SliderInt("Tesselation", &tesselationLevel, 1, 32);
-	ImGui::End();
-	ImGui::EndFrame();
-	ImGui::Render();
-	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+
+	RenderPortal();
+
+	ImGui();
+	
 
 	return;
 
@@ -505,6 +535,47 @@ void Renderer::RenderScene() {
 	
 }
 
+void Renderer::ImGui() {
+	ImGui_ImplOpenGL3_NewFrame();
+	ImGui_ImplWin32_NewFrame();
+	ImGui::NewFrame();
+	ImGui::Begin("hi");
+	ImGui::Text(("FPS: " + std::to_string(frameRate)).c_str());
+	if (ImGui::TreeNode("Particles")) {
+		ImGui::Text(("Particle Count: " + std::to_string(particleIndex)).c_str());
+		ImGui::SliderFloat("Particle Lifetime", &particleLifetime, 0, 10);
+		ImGui::ColorEdit4("Start Colour", (float*)&particleStartColour);
+		ImGui::ColorEdit4("End Colour", (float*)&particleEndColour);
+		ImGui::TreePop();
+	}
+	if (ImGui::TreeNode("Grass")) {
+		ImGui::SliderInt("Tesselation", &tesselationLevel, 1, 32);
+		ImGui::ColorEdit4("Start Colour", (float*)&grassStartColour);
+		ImGui::ColorEdit4("End Colour", (float*)&grassEndColour);
+		ImGui::TreePop();
+	}
+	if (ImGui::TreeNode("Water")) {
+		ImGui::Checkbox("Reflect Grass", &reflectGrass);
+		ImGui::Checkbox("Reflect Particles", &reflectParticles);
+		ImGui::TreePop();
+	}
+	if (ImGui::TreeNode("Light")) {
+		ImGui::SliderFloat3("Position", (float*)&light->position, 0, 10000);
+		ImGui::TreePop();
+	}
+	if (ImGui::TreeNode("Portal")) {
+		ImGui::SliderFloat3("Portal A", &(portalQuad->modelMatrix.values[12]), 0, 10000);
+		ImGui::SliderFloat3("Portal B", &(portalViewpointQuad->modelMatrix.values[12]), 0, 10000);
+		ImGui::TreePop();
+	}
+
+
+	ImGui::End();
+	ImGui::EndFrame();
+	ImGui::Render();
+	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+}
+
 void Renderer::RenderGrass() {
 	BindShader(grassShader);
 	glUniform1i(glGetUniformLocation(grassShader->GetProgram(), "noiseTex"), 0);
@@ -522,6 +593,8 @@ void Renderer::RenderGrass() {
 	glPatchParameteri(GL_PATCH_VERTICES, 3);
 	glUniform1i(glGetUniformLocation(grassShader->GetProgram(), "tesselationLevel"), tesselationLevel);
 	glUniform1f(glGetUniformLocation(grassShader->GetProgram(), "time"), timePassed);
+	glUniform4fv(glGetUniformLocation(grassShader->GetProgram(), "startColour"),1, (float*)&grassStartColour);
+	glUniform4fv(glGetUniformLocation(grassShader->GetProgram(), "endColour"),1, (float*)&grassEndColour);
 	glBindBuffer(GL_UNIFORM_BUFFER, matrixUBO);
 	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(Matrix4), &(grassQuad->modelMatrix.values));
 	glBufferSubData(GL_UNIFORM_BUFFER, sizeof(Matrix4), sizeof(Matrix4), &(viewMatrix.values));
@@ -530,8 +603,40 @@ void Renderer::RenderGrass() {
 
 	glBindVertexArray(grassQuad->GetVAO());
 	//glDrawArrays(GL_PATCHES, 0, 4);
-	glDrawElements(GL_PATCHES, 999,GL_UNSIGNED_INT, 0);
+	glDrawElements(GL_PATCHES, 6,GL_UNSIGNED_INT, 0);
 	glBindVertexArray(0);
+}
+
+void Renderer::SetupPortalFBOs() {
+	glGenTextures(1, &portalColour);
+	glBindTexture(GL_TEXTURE_2D, portalColour);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+
+	glGenTextures(1, &portalDepth);
+	glBindTexture(GL_TEXTURE_2D, portalDepth);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, width, height, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, NULL);
+
+
+	glGenFramebuffers(1, &portalFBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, portalFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, portalColour, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, portalDepth, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_TEXTURE_2D, portalDepth, 0);
+
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE || !reflectionColour || !reflectionDepth) {
+		return;
+	}
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 void Renderer::SetupWaterFBOs() {
@@ -602,6 +707,58 @@ void Renderer::SetupWaterFBOs() {
 	
 }
 
+void Renderer::RenderPortal() {
+	
+
+
+	glBindFramebuffer(GL_FRAMEBUFFER, portalFBO);
+	glViewport(0, 0, width, height);
+	//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, portalColour, 0);
+	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	//BindShader(shader);
+	//glUniform1i(glGetUniformLocation(shader->GetProgram(), "clipHeight"), waterHeight);
+	//glUniform1i(glGetUniformLocation(shader->GetProgram(), "clipping"), -1);
+	camera->SetPosition(camera->GetPosition() + Vector3(4000, 0, 0));
+	viewMatrix = camera->BuildViewMatrix();
+
+	DrawSkybox();
+	BindShader(shader);
+	glBindBuffer(GL_UNIFORM_BUFFER, matrixUBO);
+	glUniform1i(glGetUniformLocation(shader->GetProgram(), "diffuseTex"), 0);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, texture);
+	glUniform1i(glGetUniformLocation(shader->GetProgram(), "bumpTex"), 1);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, bumpMap);
+
+	glUniform3fv(glGetUniformLocation(shader->GetProgram(), "cameraPos"), 1, (float*)&camera->GetPosition());
+	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(Matrix4), &(modelMatrix.values));
+	glBufferSubData(GL_UNIFORM_BUFFER, sizeof(Matrix4), sizeof(Matrix4), &(viewMatrix.values));
+
+	heightMap->Draw();
+
+
+	//RenderSpiders();
+	//RenderReflection();
+	RenderGrass();
+	RenderParticles();
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	camera->SetPosition(camera->GetPosition() - Vector3(4000, 0, 0));
+	viewMatrix = camera->BuildViewMatrix();
+	glBindBuffer(GL_UNIFORM_BUFFER, matrixUBO);
+	glBufferSubData(GL_UNIFORM_BUFFER, sizeof(Matrix4), sizeof(Matrix4), &(viewMatrix.values));
+	BindShader(portalShader);
+	glUniform1i(glGetUniformLocation(portalShader->GetProgram(), "portalTex"), 0);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, portalColour);
+	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(Matrix4), &(portalQuad->modelMatrix.values));
+	portalQuad->Draw();
+	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(Matrix4), &(portalViewpointQuad->modelMatrix.values));
+	portalViewpointQuad->Draw();
+	
+}
 void Renderer::RenderReflection() {
 	glBindFramebuffer(GL_FRAMEBUFFER, reflectionFBO);
 	glViewport(0, 0, width, height);
@@ -624,9 +781,9 @@ void Renderer::RenderReflection() {
 	
 	heightMap->Draw();
 	
-	RenderSpiders();
-	RenderGrass();
-	RenderParticles();
+	//RenderSpiders();
+	if(reflectGrass)RenderGrass();
+	if(reflectParticles)RenderParticles();
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, texture);
 	BindShader(shader);

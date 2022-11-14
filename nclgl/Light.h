@@ -24,10 +24,12 @@ public:
 	Vector4 GetSpecularColour() const { return specularColour; }
 	void SetSpecularColour(const Vector4& val) { specularColour = val; }
 
-protected:
 	Vector3 position;
 	float radius;
 	Vector4 diffuseColour;
 	Vector4 specularColour;
+
+protected:
+	
 };
 

@@ -1,6 +1,12 @@
 #include "Window.h"
 #include "Mouse.h"
 #include "Keyboard.h"
+#include "../Blank Project/imgui.h"
+#include "../Blank Project/imgui_impl_opengl3.h"
+#include "../Blank Project/imgui_impl_opengl3_loader.h"
+#include "../Blank Project/imgui_impl_win32.h"
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
 
 Window* Window::window		= nullptr;
 Keyboard*Window::keyboard	= nullptr;
@@ -136,6 +142,7 @@ bool	Window::UpdateWindow() {
 
 	while(PeekMessage(&msg,windowHandle,0,0,PM_REMOVE)) {
 		CheckMessages(msg); 
+		
 	}
 	return !forceQuit;
 }
@@ -175,6 +182,9 @@ void Window::CheckMessages(MSG &msg)	{
 }
 
 LRESULT CALLBACK Window::WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)	{
+	if (ImGui_ImplWin32_WndProcHandler(window->GetHandle(), message, wParam,lParam)) {
+		return true;
+	}
     switch(message)	 {
         case(WM_DESTROY):	{
 			window->ShowOSPointer(true);

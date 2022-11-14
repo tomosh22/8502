@@ -9,6 +9,8 @@ layout(std140) uniform matrices{
 	mat4 modelViewMatrix;
 };
 uniform float time;
+uniform vec4 startColour;
+uniform vec4 endColour;
 
 out Vertex{
 	vec4 colour;
@@ -46,7 +48,7 @@ void main() {
     );
 
     
-    vec4 darkGreen = vec4(0, 0.2, 0, 1);
+    //vec4 darkGreen = vec4(0, 0.2, 0, 1);
 
     mat4 mvp = projMatrix*viewMatrix*modelMatrix;
     //mat4 mvp = projMatrix*viewMatrix*mv;
@@ -59,11 +61,11 @@ void main() {
         float height = -0.5 + rand(base.xz + 9)/5;
         //vec4 offset = vec4(sin(freq))
         gl_Position = mvp * (gl_in[0].gl_Position + vec4(sin(freq) * amp, 0, height, 0));
-        OUT.colour = vec4(rand(base.xz+1), 1 - rand(base.xz + 2) / 10, 0, 1);
+        OUT.colour = endColour + vec4(rand(base.xz)/2 - 1/4,rand(base.xz+1)/2 - 1/4,0,1);
         EmitVertex();
 
         gl_Position = mvp * (gl_in[0].gl_Position + vec4(rand(base.xz+3)/20 + rand(base.xz + 4) / 5, rand(base.xz+5)/20 + rand(base.xz + 6) / 5, 0, 0));
-        OUT.colour = darkGreen;
+        OUT.colour = startColour + vec4(rand(base.xz)/4 - 1/8,rand(base.xz+1)/4 - 1/8,0,1);
         EmitVertex();
         base += 6;
 
