@@ -133,7 +133,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	camera = new Camera(0, 0, Vector3(3500,1000,5500));
 
 	lightIntensity = 1;
-	lightDir = Vector3(1, 0, 0);
+	//lightDir = Vector3(1, 0, 0);
 	lightDiffuseColour = Vector4(1, 1, 1,1);
 	lightSpecularColour = Vector4(0, 1, 0,1);
 	lightRadius = 10000;
@@ -149,17 +149,36 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	}
 
 	glGenTextures(1, &shadowTex);
-	glBindTexture(GL_TEXTURE_2D, shadowTex);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOWSIZE, SHADOWSIZE, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-	glBindTexture(GL_TEXTURE_2D, 0);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, shadowTex);
+	glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	for (int i = 0; i < 6; i++)
+	{
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT,SHADOWSIZE, SHADOWSIZE, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	}
+	
+	glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
 
-	glGenFramebuffers(1, &shadowFBO);
-	glBindFramebuffer(GL_FRAMEBUFFER, shadowFBO);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, shadowTex, 0);
-	glDrawBuffer(GL_NONE);
+	fboMap = {
+		{0,shadowFBOpx},
+		{1,shadowFBOnx},
+		{2,shadowFBOpy},
+		{3,shadowFBOny},
+		{4,shadowFBOpz},
+		{5,shadowFBOnz},
+	};
+
+	
+	for (int i = 0; i < 6; i++)
+	{
+		glGenFramebuffers(1, &fboMap.at(i));
+		glBindFramebuffer(GL_FRAMEBUFFER, fboMap.at(i));
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, shadowTex, 0);
+		glDrawBuffer(GL_NONE);
+	}
+	
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 
@@ -274,7 +293,7 @@ Renderer::~Renderer(void) {
 	delete grassShader;
 	//todo delete all textures and fbos
 	glDeleteTextures(1, &shadowTex);
-	glDeleteFramebuffers(1, &shadowFBO);
+	glDeleteFramebuffers(1, &shadowFBOpx);
 	delete shadowShader;
 	//todo fix memory leak
 	/*for (int i = 0; i < MAX_PARTICLES; i++)
@@ -300,7 +319,7 @@ void Renderer::DrawHeightMap() {
 
 	glUniform1i(glGetUniformLocation(shader->GetProgram(), "shadowTex"), 2);
 	glActiveTexture(GL_TEXTURE2);
-	glBindTexture(GL_TEXTURE_2D, shadowTex);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, shadowTex);
 
 	glUniform3fv(glGetUniformLocation(shader->GetProgram(), "cameraPos"), 1, (float*)&camera->GetPosition());
 	glUniform1i(glGetUniformLocation(shader->GetProgram(), "renderFog"), renderFog);
@@ -341,6 +360,9 @@ void Renderer::DrawSkybox() {
 
 	BindShader(skyboxShader);
 	UpdateShaderMatrices();
+	glUniform1i(glGetUniformLocation(skyboxShader->GetProgram(), "cubeTex"), 0);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, cubeMap);
 	skyboxQuad->Draw();
 	glDepthMask(GL_TRUE);
 }
@@ -388,6 +410,9 @@ void Renderer::UpdateParticles(float dt) {
 }
 
 void Renderer::UpdateScene(float dt) {
+
+	//light->position = camera->position;
+
 	timePassed += dt;
 	frameRate = 1 / dt;
 	//std::cout << (float)1 / dt << " fps\n" << particleIndex << " particles\n";
@@ -561,23 +586,34 @@ void Renderer::RenderSpiders() {
 
 
 void Renderer::DrawShadowScene() {
-	glBindFramebuffer(GL_FRAMEBUFFER, shadowFBO);
-	glClear(GL_DEPTH_BUFFER_BIT);
-	glViewport(0, 0, SHADOWSIZE, SHADOWSIZE);
-	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-	BindShader(shadowShader);
-	glBindBuffer(GL_UNIFORM_BUFFER, matrixUBO);
-	std::cout << lightDir << '\n';
-	glBufferSubData(GL_UNIFORM_BUFFER, sizeof(Matrix4), sizeof(Matrix4), &(Matrix4::BuildViewMatrix(light->GetPosition(),heightMap->GetHeightMapSize() * lightDir)));
-	glBufferSubData(GL_UNIFORM_BUFFER, 4* sizeof(Matrix4), sizeof(Matrix4), &(projMatrix * Matrix4::BuildViewMatrix(light->GetPosition(), heightMap->GetHeightMapSize() * lightDir)));
-	
-	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(Matrix4), &(grassQuad->modelMatrix.values));
-	glBufferSubData(GL_UNIFORM_BUFFER, 2 * sizeof(Matrix4), sizeof(Matrix4), &(projMatrix.values));
-	
+	std::map<int, Vector3> dirMap{
+		{0,Vector3(1,0,0)},
+		{1,Vector3(-1,0,0)},
+		{2,Vector3(0,1,0)},
+		{3,Vector3(0,-1,0)},
+		{4,Vector3(0,0,1)},
+		{5,Vector3(0,0,-1)},
+	};
+	for (int i = 0; i < 6; i++)
+	{
+		glBindFramebuffer(GL_FRAMEBUFFER, fboMap.at(i));
+		glClear(GL_DEPTH_BUFFER_BIT);
+		glViewport(0, 0, SHADOWSIZE, SHADOWSIZE);
+		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+		BindShader(shadowShader);
+		glBindBuffer(GL_UNIFORM_BUFFER, matrixUBO);
+		glBufferSubData(GL_UNIFORM_BUFFER, sizeof(Matrix4), sizeof(Matrix4), &(Matrix4::BuildViewMatrix(light->GetPosition(), dirMap.at(i)*100000)));
+		glBufferSubData(GL_UNIFORM_BUFFER, 4 * sizeof(Matrix4), sizeof(Matrix4), &(projMatrix * Matrix4::BuildViewMatrix(light->GetPosition(), dirMap.at(i)* 100000)));
 
-	RenderGrass();
-	//RenderParticles();
-	//DrawHeightMap();
+		glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(Matrix4), &(grassQuad->modelMatrix.values));
+		glBufferSubData(GL_UNIFORM_BUFFER, 2 * sizeof(Matrix4), sizeof(Matrix4), &(projMatrix.values));
+
+
+		RenderGrass();
+		//RenderParticles();
+		//DrawHeightMap();
+	}
+	
 	
 
 	glBufferSubData(GL_UNIFORM_BUFFER, sizeof(Matrix4), sizeof(Matrix4), &(viewMatrix));
@@ -692,7 +728,7 @@ void Renderer::ImGui() {
 		ImGui::SliderFloat("Intensity", &light->intensity, 0, 10);
 		ImGui::ColorEdit4("Diffuse Colour", (float*)&light->diffuseColour);
 		ImGui::ColorEdit4("Specular Colour", (float*)&light->specularColour);
-		ImGui::SliderFloat3("Direction", (float*)&lightDir,-1,1);
+		//ImGui::SliderFloat3("Direction", (float*)&lightDir,-1,1);
 		ImGui::TreePop();
 	}
 	if (ImGui::TreeNode("Portal")) {

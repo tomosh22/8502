@@ -8,7 +8,7 @@ uniform vec4 diffuseColour;
 uniform vec4 specularColour;
 uniform vec3 lightPos;
 uniform float lightRadius;
-uniform sampler2D shadowTex;
+uniform samplerCube shadowTex;
 uniform bool renderFog;
 
 in Vertex{
@@ -45,7 +45,7 @@ void main(void){
 		abs(shadowNDC.z) < 1
 	){
 		vec3 biasCoord = shadowNDC * 0.5 + 0.5;
-		float shadowZ = texture(shadowTex,biasCoord.xy).x;
+		float shadowZ = texture(shadowTex,biasCoord).x;
 		if(shadowZ < biasCoord.z){shadow = 0;}
 	}
 

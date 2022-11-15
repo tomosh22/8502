@@ -4,6 +4,7 @@
 #include <stack>
 #include "imgui.h"
 #include "imgui_impl_opengl3.h"
+#include <map>
 class HeightMap;
 class Camera;
 class Light;
@@ -154,9 +155,16 @@ protected:
 
     GLuint shadowTex;
     GLuint shadowFBO;
+    GLuint shadowFBOpx;
+    GLuint shadowFBOnx;
+    GLuint shadowFBOpy;
+    GLuint shadowFBOny;
+    GLuint shadowFBOpz;
+    GLuint shadowFBOnz;
     Shader* shadowShader;
     bool renderShadows;
     Vector3 lightDir;
+    std::map<int, GLuint> fboMap;
 
     bool renderFog;
 };
