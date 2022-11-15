@@ -57,8 +57,6 @@ void main(void){
 		float distance = length((viewMatrix * modelMatrix*vec4(position,1)).xyz);
 		OUT.fogFactor = exp(-pow((distance /3000), 5));
 		OUT.fogFactor = clamp(OUT.fogFactor, 0.0, 1.0);
-		//float val = distance/5000;
-		//OUT.colour = vec4(val,val,val,1);
 	}
 	
 

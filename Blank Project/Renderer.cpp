@@ -23,7 +23,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 		return;
 	}
 	grassQuad = Mesh::GenerateQuadWithIndices();
-	grassQuad->modelMatrix = grassQuad->modelMatrix * Matrix4::Translation(Vector3(4000, 475, 4000));
+	grassQuad->modelMatrix = grassQuad->modelMatrix * Matrix4::Translation(Vector3(4000, 2000, 4000));
 	grassQuad->modelMatrix = grassQuad->modelMatrix * Matrix4::Scale(Vector3(200, 200, 200));
 	grassQuad->modelMatrix = grassQuad->modelMatrix * Matrix4::Rotation(90,Vector3(1, 0, 0));
 	tesselationLevel = 16;
@@ -133,10 +133,11 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	camera = new Camera(0, 0, Vector3(3500,1000,5500));
 
 	lightIntensity = 1;
+	lightDir = Vector3(1, 0, 0);
 	lightDiffuseColour = Vector4(1, 1, 1,1);
 	lightSpecularColour = Vector4(0, 1, 0,1);
 	lightRadius = 10000;
-	light = new Light(Vector3(4800, 439, 4050), lightDiffuseColour * lightIntensity, lightSpecularColour, lightRadius);
+	light = new Light(Vector3(3975, 2316, 4092), lightDiffuseColour * lightIntensity, lightSpecularColour, lightRadius);
 	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / height, 45.0f);
 	modelMatrix = Matrix4();
 	modelMatrix.ToIdentity();
@@ -320,17 +321,14 @@ void Renderer::RenderGrass() {
 	glBindVertexArray(0);
 	return;*/
 
+	
 
 	glPatchParameteri(GL_PATCH_VERTICES, 3);
 	glUniform1i(glGetUniformLocation(grassShader->GetProgram(), "tesselationLevel"), tesselationLevel);
 	glUniform1f(glGetUniformLocation(grassShader->GetProgram(), "time"), timePassed);
 	glUniform4fv(glGetUniformLocation(grassShader->GetProgram(), "startColour"), 1, (float*)&grassStartColour);
 	glUniform4fv(glGetUniformLocation(grassShader->GetProgram(), "endColour"), 1, (float*)&grassEndColour);
-	glBindBuffer(GL_UNIFORM_BUFFER, matrixUBO);
-	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(Matrix4), &(grassQuad->modelMatrix.values));
-	glBufferSubData(GL_UNIFORM_BUFFER, sizeof(Matrix4), sizeof(Matrix4), &(viewMatrix.values));
-	glBufferSubData(GL_UNIFORM_BUFFER, 2 * sizeof(Matrix4), sizeof(Matrix4), &(projMatrix.values));
-	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+	
 
 	glBindVertexArray(grassQuad->GetVAO());
 	//glDrawArrays(GL_PATCHES, 0, 4);
@@ -569,13 +567,21 @@ void Renderer::DrawShadowScene() {
 	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
 	BindShader(shadowShader);
 	glBindBuffer(GL_UNIFORM_BUFFER, matrixUBO);
-	glBufferSubData(GL_UNIFORM_BUFFER, sizeof(Matrix4), sizeof(Matrix4), &(Matrix4::BuildViewMatrix(light->GetPosition(), Vector3(-1, 0, 0))));
-	glBufferSubData(GL_UNIFORM_BUFFER, 4* sizeof(Matrix4), sizeof(Matrix4), &(projMatrix * Matrix4::BuildViewMatrix(light->GetPosition(), Vector3(-1, 0, 0))));
-	glBindBuffer(GL_UNIFORM_BUFFER, 0);
-	RenderGrass();
-	RenderParticles();
-	DrawHeightMap();
+	std::cout << lightDir << '\n';
+	glBufferSubData(GL_UNIFORM_BUFFER, sizeof(Matrix4), sizeof(Matrix4), &(Matrix4::BuildViewMatrix(light->GetPosition(),heightMap->GetHeightMapSize() * lightDir)));
+	glBufferSubData(GL_UNIFORM_BUFFER, 4* sizeof(Matrix4), sizeof(Matrix4), &(projMatrix * Matrix4::BuildViewMatrix(light->GetPosition(), heightMap->GetHeightMapSize() * lightDir)));
 	
+	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(Matrix4), &(grassQuad->modelMatrix.values));
+	glBufferSubData(GL_UNIFORM_BUFFER, 2 * sizeof(Matrix4), sizeof(Matrix4), &(projMatrix.values));
+	
+
+	RenderGrass();
+	//RenderParticles();
+	//DrawHeightMap();
+	
+
+	glBufferSubData(GL_UNIFORM_BUFFER, sizeof(Matrix4), sizeof(Matrix4), &(viewMatrix));
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 	glViewport(0, 0, width, height);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -593,7 +599,14 @@ void Renderer::RenderScene() {
 	if(renderShadows)DrawShadowScene();
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	DrawSkybox();
+
+	glBindBuffer(GL_UNIFORM_BUFFER, matrixUBO);
+	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(Matrix4), &(grassQuad->modelMatrix.values));
+	glBufferSubData(GL_UNIFORM_BUFFER, sizeof(Matrix4), sizeof(Matrix4), &(viewMatrix.values));
+	glBufferSubData(GL_UNIFORM_BUFFER, 2 * sizeof(Matrix4), sizeof(Matrix4), &(projMatrix.values));
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 	RenderGrass();
+
 	RenderReflection();
 	RenderParticles();
 	DrawHeightMap();
@@ -679,6 +692,7 @@ void Renderer::ImGui() {
 		ImGui::SliderFloat("Intensity", &light->intensity, 0, 10);
 		ImGui::ColorEdit4("Diffuse Colour", (float*)&light->diffuseColour);
 		ImGui::ColorEdit4("Specular Colour", (float*)&light->specularColour);
+		ImGui::SliderFloat3("Direction", (float*)&lightDir,-1,1);
 		ImGui::TreePop();
 	}
 	if (ImGui::TreeNode("Portal")) {

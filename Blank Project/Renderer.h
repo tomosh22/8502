@@ -156,6 +156,7 @@ protected:
     GLuint shadowFBO;
     Shader* shadowShader;
     bool renderShadows;
+    Vector3 lightDir;
 
     bool renderFog;
 };
