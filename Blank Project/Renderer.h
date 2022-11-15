@@ -43,6 +43,9 @@ public:
 
     void SetupPortalFBOs();
     void RenderPortal();
+
+    void DrawShadowScene();
+    void DrawHeightMap();
 protected:
     float frameRate;
 
@@ -147,6 +150,13 @@ protected:
     Mesh* portalQuad;
     Mesh* portalViewpointQuad;
     Shader* portalShader;
+    bool portalRenderWater;
 
+    GLuint shadowTex;
+    GLuint shadowFBO;
+    Shader* shadowShader;
+    bool renderShadows;
+
+    bool renderFog;
 };
 

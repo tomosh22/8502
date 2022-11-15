@@ -5,11 +5,14 @@
 //uniform mat4 projMatrix;
 uniform int clipHeight;
 uniform int clipping;
+uniform vec3 lightPos;
+uniform bool renderFog;
 layout(std140) uniform matrices{
 	mat4 modelMatrix;
 	mat4 viewMatrix;
 	mat4 projMatrix;
 	mat4 modelViewMatrix;
+	mat4 shadowMatrix;
 };
 
 in vec3 position;
@@ -26,6 +29,7 @@ out Vertex{
 	vec3 tangent;
 	vec3 binormal;
 	float fogFactor;
+	vec4 shadowProj;
 } OUT;
 
 void main(void){
@@ -39,19 +43,26 @@ void main(void){
 	OUT.texCoord = texCoord;
 	OUT.colour = colour;
 
-
+	vec4 worldPos = (modelMatrix * vec4(position ,1));
 	mat3 normalMatrix = transpose(inverse(mat3(modelMatrix)));
 	OUT.normal = normalize(normalMatrix * normalize(normal));
-	OUT.worldPos = (modelMatrix * vec4(position, 1)).xyz;
+	OUT.worldPos = worldPos.xyz;
 
 	vec3 wNormal = normalize(normalMatrix * normalize(normal));
 	vec3 wTangent = normalize(normalMatrix * normalize(tangent.xyz));
 	OUT.tangent = wTangent;
 	OUT.binormal = cross(wTangent, wNormal) * tangent.w;
 
-	float distance = length((viewMatrix * modelMatrix*vec4(position,1)).xyz);
-	OUT.fogFactor = exp(-pow((distance /3000), 5));
-	OUT.fogFactor = clamp(OUT.fogFactor, 0.0, 1.0);
-	//float val = distance/5000;
-	//OUT.colour = vec4(val,val,val,1);
+	if(renderFog){
+		float distance = length((viewMatrix * modelMatrix*vec4(position,1)).xyz);
+		OUT.fogFactor = exp(-pow((distance /3000), 5));
+		OUT.fogFactor = clamp(OUT.fogFactor, 0.0, 1.0);
+		//float val = distance/5000;
+		//OUT.colour = vec4(val,val,val,1);
+	}
+	
+
+	vec3 viewDir = normalize(lightPos - OUT.worldPos);
+	vec4 pushVal = vec4(OUT.normal,0)*dot(viewDir,OUT.normal);
+	OUT.shadowProj = shadowMatrix * (worldPos+pushVal);
 }

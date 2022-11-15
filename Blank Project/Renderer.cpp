@@ -8,10 +8,11 @@
 #include "imgui.h"
 #include "imgui_impl_opengl3.h"
 #include "imgui_impl_win32.h"
-
+#define SHADOWSIZE 2048
 Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	
 	//glClearColor(0.2, 0.4, 0.2, 1);
+	renderFog = true;
 	frameRate = 0;
 	timePassed = 0;
 	srand(time(0));
@@ -109,6 +110,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 		return;
 	}
 	SetupPortalFBOs();
+	portalRenderWater = false;
 
 
 	currentFrame = 0;
@@ -131,13 +133,35 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	camera = new Camera(0, 0, Vector3(3500,1000,5500));
 
 	lightIntensity = 1;
-	lightDiffuseColour = Vector4(0.2, 1, 0.2,1);
+	lightDiffuseColour = Vector4(1, 1, 1,1);
 	lightSpecularColour = Vector4(0, 1, 0,1);
-	lightRadius = 1000;
-	light = new Light(Vector3(3300, 2000, 5850), lightDiffuseColour * lightIntensity, lightSpecularColour, lightRadius);
+	lightRadius = 10000;
+	light = new Light(Vector3(4800, 439, 4050), lightDiffuseColour * lightIntensity, lightSpecularColour, lightRadius);
 	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / height, 45.0f);
 	modelMatrix = Matrix4();
 	modelMatrix.ToIdentity();
+
+
+	shadowShader = new Shader("shadowVertex.glsl", "shadowFragment.glsl");
+	if (!shadowShader->LoadSuccess()) {
+		return;
+	}
+
+	glGenTextures(1, &shadowTex);
+	glBindTexture(GL_TEXTURE_2D, shadowTex);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOWSIZE, SHADOWSIZE, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	glGenFramebuffers(1, &shadowFBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, shadowFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, shadowTex, 0);
+	glDrawBuffer(GL_NONE);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
 	glEnable(GL_BLEND);
@@ -151,9 +175,10 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	glUniformBlockBinding(grassShader->GetProgram(), glGetUniformBlockIndex(grassShader->GetProgram(), "matrices"), 0);
 	glUniformBlockBinding(animShader->GetProgram(), glGetUniformBlockIndex(animShader->GetProgram(), "matrices"), 0);
 	glUniformBlockBinding(portalShader->GetProgram(), glGetUniformBlockIndex(portalShader->GetProgram(), "matrices"), 0);
+	glUniformBlockBinding(shadowShader->GetProgram(), glGetUniformBlockIndex(shadowShader->GetProgram(), "matrices"), 0);
 
 	glBindBufferBase(GL_UNIFORM_BUFFER, 0, matrixUBO);
-	glBufferData(GL_UNIFORM_BUFFER, 4 * sizeof(Matrix4), NULL, GL_STATIC_DRAW);
+	glBufferData(GL_UNIFORM_BUFFER, 5 * sizeof(Matrix4), NULL, GL_STATIC_DRAW);
 
 
 
@@ -226,6 +251,8 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	ImGui_ImplOpenGL3_Init("#version 330");
 	
 
+	
+
 	init = true;
 }
 
@@ -244,6 +271,10 @@ Renderer::~Renderer(void) {
 	delete coloursGPU;
 	delete grassQuad;
 	delete grassShader;
+	//todo delete all textures and fbos
+	glDeleteTextures(1, &shadowTex);
+	glDeleteFramebuffers(1, &shadowFBO);
+	delete shadowShader;
 	//todo fix memory leak
 	/*for (int i = 0; i < MAX_PARTICLES; i++)
 	{
@@ -252,7 +283,60 @@ Renderer::~Renderer(void) {
 	delete particles;*/
 }
 
+void Renderer::DrawHeightMap() {
+	BindShader(shader);
+	glBindBuffer(GL_UNIFORM_BUFFER, matrixUBO);
+	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(Matrix4), &(modelMatrix.values));
+	glBufferSubData(GL_UNIFORM_BUFFER, sizeof(Matrix4), sizeof(Matrix4), &(viewMatrix.values));
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+	glUniform1i(glGetUniformLocation(shader->GetProgram(), "diffuseTex"), 0);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, texture);
 
+	glUniform1i(glGetUniformLocation(shader->GetProgram(), "bumpTex"), 1);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, bumpMap);
+
+	glUniform1i(glGetUniformLocation(shader->GetProgram(), "shadowTex"), 2);
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, shadowTex);
+
+	glUniform3fv(glGetUniformLocation(shader->GetProgram(), "cameraPos"), 1, (float*)&camera->GetPosition());
+	glUniform1i(glGetUniformLocation(shader->GetProgram(), "renderFog"), renderFog);
+	SetShaderLight(*light);
+	heightMap->Draw();
+}
+
+void Renderer::RenderGrass() {
+	BindShader(grassShader);
+	glUniform1i(glGetUniformLocation(grassShader->GetProgram(), "noiseTex"), 0);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, noiseTex);
+	/*glBindBuffer(GL_UNIFORM_BUFFER, matrixUBO);
+	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(Matrix4), &(grassQuad->modelMatrix.values));
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+	glBindVertexArray(grassQuad->GetVAO());
+	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+	glBindVertexArray(0);
+	return;*/
+
+
+	glPatchParameteri(GL_PATCH_VERTICES, 3);
+	glUniform1i(glGetUniformLocation(grassShader->GetProgram(), "tesselationLevel"), tesselationLevel);
+	glUniform1f(glGetUniformLocation(grassShader->GetProgram(), "time"), timePassed);
+	glUniform4fv(glGetUniformLocation(grassShader->GetProgram(), "startColour"), 1, (float*)&grassStartColour);
+	glUniform4fv(glGetUniformLocation(grassShader->GetProgram(), "endColour"), 1, (float*)&grassEndColour);
+	glBindBuffer(GL_UNIFORM_BUFFER, matrixUBO);
+	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(Matrix4), &(grassQuad->modelMatrix.values));
+	glBufferSubData(GL_UNIFORM_BUFFER, sizeof(Matrix4), sizeof(Matrix4), &(viewMatrix.values));
+	glBufferSubData(GL_UNIFORM_BUFFER, 2 * sizeof(Matrix4), sizeof(Matrix4), &(projMatrix.values));
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+	glBindVertexArray(grassQuad->GetVAO());
+	//glDrawArrays(GL_PATCHES, 0, 4);
+	glDrawElements(GL_PATCHES, 6, GL_UNSIGNED_INT, 0);
+	glBindVertexArray(0);
+}
 
 void Renderer::DrawSkybox() {
 	glDepthMask(GL_FALSE);
@@ -477,6 +561,27 @@ void Renderer::RenderSpiders() {
 	}
 }
 
+
+void Renderer::DrawShadowScene() {
+	glBindFramebuffer(GL_FRAMEBUFFER, shadowFBO);
+	glClear(GL_DEPTH_BUFFER_BIT);
+	glViewport(0, 0, SHADOWSIZE, SHADOWSIZE);
+	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+	BindShader(shadowShader);
+	glBindBuffer(GL_UNIFORM_BUFFER, matrixUBO);
+	glBufferSubData(GL_UNIFORM_BUFFER, sizeof(Matrix4), sizeof(Matrix4), &(Matrix4::BuildViewMatrix(light->GetPosition(), Vector3(-1, 0, 0))));
+	glBufferSubData(GL_UNIFORM_BUFFER, 4* sizeof(Matrix4), sizeof(Matrix4), &(projMatrix * Matrix4::BuildViewMatrix(light->GetPosition(), Vector3(-1, 0, 0))));
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+	RenderGrass();
+	RenderParticles();
+	DrawHeightMap();
+	
+	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+	glViewport(0, 0, width, height);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+};
+
+
 void Renderer::RenderScene() {
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	
@@ -485,37 +590,30 @@ void Renderer::RenderScene() {
 	glBindBuffer(GL_UNIFORM_BUFFER, matrixUBO);
 	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(Matrix4), &(modelMatrix.values));
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+	if(renderShadows)DrawShadowScene();
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	DrawSkybox();
-	BindShader(shader);
-	glUniform1i(glGetUniformLocation(shader->GetProgram(), "diffuseTex"), 0);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, texture);
-
-	glUniform1i(glGetUniformLocation(shader->GetProgram(), "bumpTex"), 1);
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, bumpMap);
-
-	glUniform3fv(glGetUniformLocation(shader->GetProgram(), "cameraPos"), 1, (float*)&camera->GetPosition());
-	SetShaderLight(*light);
-	heightMap->Draw();
+	RenderGrass();
+	RenderReflection();
+	RenderParticles();
+	DrawHeightMap();
 
 	
 	//RenderTrees();
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	
 	//RenderSpiders();
 
 	
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	//glDisable(GL_CULL_FACE);
-	RenderGrass();
+	
 	//glEnable(GL_CULL_FACE);
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-	RenderReflection();
-	RenderParticles();
+	
 
 
-	RenderPortal();
+	//RenderPortal();
 
 	ImGui();
 	
@@ -553,6 +651,8 @@ void Renderer::ImGui() {
 	cameraPosString.append(" X " + std::to_string(camera->GetPosition().z));*/
 	//ImGui::Text(cameraPosString.c_str());
 	ImGui::SliderFloat3("Camera Position", (float*)&(camera->position), 0, 10000);
+	ImGui::Checkbox("Render Fog", &renderFog);
+	ImGui::Checkbox("Render Shadows", &renderShadows);
 	if (ImGui::TreeNode("Particles")) {
 		ImGui::Text(("Particle Count: " + std::to_string(particleIndex)).c_str());
 		ImGui::SliderFloat("Lifetime", &particleLifetime, 0, 10);
@@ -584,6 +684,7 @@ void Renderer::ImGui() {
 	if (ImGui::TreeNode("Portal")) {
 		ImGui::SliderFloat3("Portal A", &(portalQuad->modelMatrix.values[12]), 0, 10000);
 		ImGui::SliderFloat3("Portal B", &(portalViewpointQuad->modelMatrix.values[12]), 0, 10000);
+		ImGui::Checkbox("Render Water", &portalRenderWater);
 		ImGui::TreePop();
 	}
 
@@ -594,36 +695,7 @@ void Renderer::ImGui() {
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
-void Renderer::RenderGrass() {
-	BindShader(grassShader);
-	glUniform1i(glGetUniformLocation(grassShader->GetProgram(), "noiseTex"), 0);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, noiseTex);
-	/*glBindBuffer(GL_UNIFORM_BUFFER, matrixUBO);
-	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(Matrix4), &(grassQuad->modelMatrix.values));
-	glBindBuffer(GL_UNIFORM_BUFFER, 0);
-	glBindVertexArray(grassQuad->GetVAO());
-	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-	glBindVertexArray(0);
-	return;*/
-	
-	
-	glPatchParameteri(GL_PATCH_VERTICES, 3);
-	glUniform1i(glGetUniformLocation(grassShader->GetProgram(), "tesselationLevel"), tesselationLevel);
-	glUniform1f(glGetUniformLocation(grassShader->GetProgram(), "time"), timePassed);
-	glUniform4fv(glGetUniformLocation(grassShader->GetProgram(), "startColour"),1, (float*)&grassStartColour);
-	glUniform4fv(glGetUniformLocation(grassShader->GetProgram(), "endColour"),1, (float*)&grassEndColour);
-	glBindBuffer(GL_UNIFORM_BUFFER, matrixUBO);
-	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(Matrix4), &(grassQuad->modelMatrix.values));
-	glBufferSubData(GL_UNIFORM_BUFFER, sizeof(Matrix4), sizeof(Matrix4), &(viewMatrix.values));
-	glBufferSubData(GL_UNIFORM_BUFFER, 2*sizeof(Matrix4), sizeof(Matrix4), &(projMatrix.values));
-	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
-	glBindVertexArray(grassQuad->GetVAO());
-	//glDrawArrays(GL_PATCHES, 0, 4);
-	glDrawElements(GL_PATCHES, 6,GL_UNSIGNED_INT, 0);
-	glBindVertexArray(0);
-}
 
 void Renderer::SetupPortalFBOs() {
 	glGenTextures(1, &portalColour);
@@ -757,7 +829,7 @@ void Renderer::RenderPortal() {
 
 
 	//RenderSpiders();
-	//RenderReflection();
+	if(portalRenderWater)RenderReflection();
 	RenderGrass();
 	RenderParticles();
 
