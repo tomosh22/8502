@@ -16,6 +16,7 @@ in Vertex{
 	vec3 worldPos;
 	vec3 tangent;
 	vec3 binormal;
+	float fogFactor;
 } IN;
 
 out vec4 fragColour;
@@ -40,4 +41,8 @@ void main(void){
 	fragColour.a = diffuse.a;
 	fragColour += diffuse * 0.5;
 	//fragColour = vec4(1, 0, 0, 1);
+
+	fragColour = mix(vec4(0.4, 0.2, 0.2,1), fragColour, IN.fogFactor);
+	//fragColour = vec4(IN.fogFactor, IN.fogFactor, IN.fogFactor,1);
+
 }

@@ -10,6 +10,7 @@ public:
 		this->diffuseColour = diffuseColour;
 		this->specularColour = specularColour;
 		this->radius = radius;
+		intensity = 1;
 	}
 	~Light(void) {};
 	Vector3 GetPosition() const { return position; }
@@ -28,6 +29,7 @@ public:
 	float radius;
 	Vector4 diffuseColour;
 	Vector4 specularColour;
+	float intensity;
 
 protected:
 	

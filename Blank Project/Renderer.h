@@ -50,6 +50,10 @@ protected:
     Shader* shader;
     Camera* camera;
     Light* light;
+    float lightIntensity;
+    Vector4 lightDiffuseColour;
+    Vector4 lightSpecularColour;
+    int lightRadius;
     GLuint texture;
     GLuint bumpMap;
 
@@ -68,6 +72,7 @@ protected:
     float particleLifetime;
     Vector4 particleStartColour;
     Vector4 particleEndColour;
+    int particleRadius;
 
     float particleTime;
 

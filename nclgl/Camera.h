@@ -35,8 +35,9 @@ public:
 		position.y = -position.y;
 		position.y += waterHeight;
 	};
+	Vector3 position;
 protected:
 	float yaw, pitch,roll;
-	Vector3 position;
+	
 };
 

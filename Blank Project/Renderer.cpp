@@ -15,15 +15,15 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	frameRate = 0;
 	timePassed = 0;
 	srand(time(0));
-	particleTexture = SOIL_load_OGL_texture(TEXTUREDIR"particle.tga", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	particleTexture = SOIL_load_OGL_texture(TEXTUREDIR"flame_particle.png", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 	
 	grassShader = new Shader("grassVertex.glsl", "grassFragment.glsl","grassGeometry.glsl","grassDomain.glsl","grassHull.glsl");
 	if (!grassShader->LoadSuccess()) {
 		return;
 	}
 	grassQuad = Mesh::GenerateQuadWithIndices();
-	grassQuad->modelMatrix = grassQuad->modelMatrix * Matrix4::Translation(Vector3(3500, 1000, 3800));
-	grassQuad->modelMatrix = grassQuad->modelMatrix * Matrix4::Scale(Vector3(500, 500, 500));
+	grassQuad->modelMatrix = grassQuad->modelMatrix * Matrix4::Translation(Vector3(4000, 475, 4000));
+	grassQuad->modelMatrix = grassQuad->modelMatrix * Matrix4::Scale(Vector3(200, 200, 200));
 	grassQuad->modelMatrix = grassQuad->modelMatrix * Matrix4::Rotation(90,Vector3(1, 0, 0));
 	tesselationLevel = 16;
 	grassStartColour = Vector4(0, 0.2, 0, 1);
@@ -43,6 +43,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	masterParticle = Mesh::GenerateQuad();
 	particleStartColour = Vector4(0, 0, 1, 1);
 	particleEndColour = Vector4(1, 0, 1, 1);
+	particleRadius = 500;
 
 	column0s = new std::array<std::array<float, 4>, MAX_PARTICLES>();
 	column1s = new std::array<std::array<float, 4>, MAX_PARTICLES>();
@@ -127,8 +128,13 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	SetTextureRepeating(bumpMap, true);
 
 	Vector3 heightMapSize = heightMap->GetHeightMapSize();
-	camera = new Camera(0, 0, Vector3(1000,2000,8000));
-	light = new Light(heightMapSize * Vector3(0.7f, 10, 0.7f), Vector4(0.8, 0.6, 0.8, 1), Vector4(0, 1, 0, 1), heightMapSize.x * 2.5f);
+	camera = new Camera(0, 0, Vector3(3500,1000,5500));
+
+	lightIntensity = 1;
+	lightDiffuseColour = Vector4(0.2, 1, 0.2,1);
+	lightSpecularColour = Vector4(0, 1, 0,1);
+	lightRadius = 1000;
+	light = new Light(Vector3(3300, 2000, 5850), lightDiffuseColour * lightIntensity, lightSpecularColour, lightRadius);
 	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / height, 45.0f);
 	modelMatrix = Matrix4();
 	modelMatrix.ToIdentity();
@@ -272,7 +278,7 @@ void Renderer::GenerateParticles(float dt, Vector3 position, int radius) {
 				particleStartColour,
 				particleEndColour,
 				false,
-				Vector3(100, 100, 100),
+				Vector3(50, 50, 50),
 				Vector3(0,0,0),
 				false
 			);
@@ -318,7 +324,7 @@ void Renderer::UpdateScene(float dt) {
 	glBindBuffer(GL_UNIFORM_BUFFER, matrixUBO);
 	glBufferSubData(GL_UNIFORM_BUFFER, sizeof(Matrix4), sizeof(Matrix4), &(viewMatrix.values));
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
-	GenerateParticles(dt, Vector3(3500, 950, 3800), 1000);
+	GenerateParticles(dt, Vector3(4000, 500, 4000), particleRadius);
 	UpdateParticles(dt);
 
 	//std::cout << '\n';
@@ -541,14 +547,22 @@ void Renderer::ImGui() {
 	ImGui::NewFrame();
 	ImGui::Begin("hi");
 	ImGui::Text(("FPS: " + std::to_string(frameRate)).c_str());
+	/*std::string cameraPosString = "Camera Position:";
+	cameraPosString.append(" X " + std::to_string(camera->GetPosition().x));
+	cameraPosString.append(" Y " + std::to_string(camera->GetPosition().y));
+	cameraPosString.append(" X " + std::to_string(camera->GetPosition().z));*/
+	//ImGui::Text(cameraPosString.c_str());
+	ImGui::SliderFloat3("Camera Position", (float*)&(camera->position), 0, 10000);
 	if (ImGui::TreeNode("Particles")) {
 		ImGui::Text(("Particle Count: " + std::to_string(particleIndex)).c_str());
-		ImGui::SliderFloat("Particle Lifetime", &particleLifetime, 0, 10);
+		ImGui::SliderFloat("Lifetime", &particleLifetime, 0, 10);
+		ImGui::SliderInt("Radius", &particleRadius,0,1000);
 		ImGui::ColorEdit4("Start Colour", (float*)&particleStartColour);
 		ImGui::ColorEdit4("End Colour", (float*)&particleEndColour);
 		ImGui::TreePop();
 	}
 	if (ImGui::TreeNode("Grass")) {
+		ImGui::SliderFloat3("Position", &(grassQuad->modelMatrix.values[12]), 0, 10000);
 		ImGui::SliderInt("Tesselation", &tesselationLevel, 1, 32);
 		ImGui::ColorEdit4("Start Colour", (float*)&grassStartColour);
 		ImGui::ColorEdit4("End Colour", (float*)&grassEndColour);
@@ -561,6 +575,10 @@ void Renderer::ImGui() {
 	}
 	if (ImGui::TreeNode("Light")) {
 		ImGui::SliderFloat3("Position", (float*)&light->position, 0, 10000);
+		ImGui::SliderFloat("Radius", &light->radius, 0, 10000);
+		ImGui::SliderFloat("Intensity", &light->intensity, 0, 10);
+		ImGui::ColorEdit4("Diffuse Colour", (float*)&light->diffuseColour);
+		ImGui::ColorEdit4("Specular Colour", (float*)&light->specularColour);
 		ImGui::TreePop();
 	}
 	if (ImGui::TreeNode("Portal")) {

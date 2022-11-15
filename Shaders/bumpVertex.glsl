@@ -25,6 +25,7 @@ out Vertex{
 	vec3 worldPos;
 	vec3 tangent;
 	vec3 binormal;
+	float fogFactor;
 } OUT;
 
 void main(void){
@@ -47,4 +48,10 @@ void main(void){
 	vec3 wTangent = normalize(normalMatrix * normalize(tangent.xyz));
 	OUT.tangent = wTangent;
 	OUT.binormal = cross(wTangent, wNormal) * tangent.w;
+
+	float distance = length((viewMatrix * modelMatrix*vec4(position,1)).xyz);
+	OUT.fogFactor = exp(-pow((distance /3000), 5));
+	OUT.fogFactor = clamp(OUT.fogFactor, 0.0, 1.0);
+	//float val = distance/5000;
+	//OUT.colour = vec4(val,val,val,1);
 }
