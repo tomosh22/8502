@@ -411,7 +411,7 @@ void Renderer::UpdateParticles(float dt) {
 
 void Renderer::UpdateScene(float dt) {
 
-	//light->position = camera->position;
+	light->position = camera->position + Vector3(0,-200,0);
 
 	timePassed += dt;
 	frameRate = 1 / dt;
@@ -603,7 +603,8 @@ void Renderer::DrawShadowScene() {
 		BindShader(shadowShader);
 		glBindBuffer(GL_UNIFORM_BUFFER, matrixUBO);
 		glBufferSubData(GL_UNIFORM_BUFFER, sizeof(Matrix4), sizeof(Matrix4), &(Matrix4::BuildViewMatrix(light->GetPosition(), dirMap.at(i)*100000)));
-		glBufferSubData(GL_UNIFORM_BUFFER, 4 * sizeof(Matrix4), sizeof(Matrix4), &(projMatrix * Matrix4::BuildViewMatrix(light->GetPosition(), dirMap.at(i)* 100000)));
+		Matrix4 shadowProjMatrix = Matrix4::Perspective(1, 15000, 1, 45);
+		glBufferSubData(GL_UNIFORM_BUFFER, 4 * sizeof(Matrix4), sizeof(Matrix4), &(shadowProjMatrix * Matrix4::BuildViewMatrix(light->GetPosition(), dirMap.at(i)* 100000)));
 
 		glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(Matrix4), &(grassQuad->modelMatrix.values));
 		glBufferSubData(GL_UNIFORM_BUFFER, 2 * sizeof(Matrix4), sizeof(Matrix4), &(projMatrix.values));

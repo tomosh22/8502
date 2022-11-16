@@ -38,7 +38,7 @@ void main(void){
 	float specFactor = clamp(dot(halfDir,bumpNormal),0,1);
 	specFactor = pow(specFactor,30);
 
-	float shadow = 1.0;
+	/*float shadow = 1.0;
 	vec3 shadowNDC = IN.shadowProj.xyz / IN.shadowProj.w;
 	if(abs(shadowNDC.x)<1 &&
 		abs(shadowNDC.y) < 1 &&
@@ -47,9 +47,13 @@ void main(void){
 		vec3 biasCoord = shadowNDC * 0.5 + 0.5;
 		float shadowZ = texture(shadowTex,biasCoord).x;
 		if(shadowZ < biasCoord.z){shadow = 0;}
-	}
+	}*/
 
-
+	vec3 fragToLight = IN.worldPos - lightPos;
+	float closestDepth = texture(shadowTex, fragToLight).r;
+	closestDepth *= 2000;
+	float currentDepth = length(fragToLight);
+	float shadow = currentDepth > closestDepth ? 1 : 0;
 
 
 	vec3 surface = (diffuse.rgb * diffuseColour.rgb);
