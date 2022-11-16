@@ -182,6 +182,7 @@ void Window::CheckMessages(MSG &msg)	{
 }
 
 LRESULT CALLBACK Window::WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)	{
+	//todo needed for imgui
 	if (ImGui_ImplWin32_WndProcHandler(window->GetHandle(), message, wParam,lParam)) {
 		return true;
 	}

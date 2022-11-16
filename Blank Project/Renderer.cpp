@@ -8,7 +8,7 @@
 #include "imgui.h"
 #include "imgui_impl_opengl3.h"
 #include "imgui_impl_win32.h"
-
+#define LIGHT_NUM 32
 Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	
 	//glClearColor(0.2, 0.4, 0.2, 1);
@@ -109,6 +109,12 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 		return;
 	}
 	SetupPortalFBOs();
+	SetupWaterFBOs();
+
+
+	
+
+
 
 
 	currentFrame = 0;
@@ -138,6 +144,68 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / height, 45.0f);
 	modelMatrix = Matrix4();
 	modelMatrix.ToIdentity();
+
+
+
+	sphere = Mesh::LoadFromMeshFile("Sphere.msh");
+	deferQuad = Mesh::GenerateQuad();
+	pointLights = new Light[LIGHT_NUM];
+	for (int i = 0; i < LIGHT_NUM; i++)
+	{
+		Light& l = pointLights[i];
+		l.SetPosition(Vector3(rand() & (int)heightMap->GetHeightMapSize().x, 2000, rand() % (int)heightMap->GetHeightMapSize().z));
+		l.SetDiffuseColour(Vector4(
+			0.5 + (float)(rand() / (float)RAND_MAX),
+			0.5 + (float)(rand() / (float)RAND_MAX),
+			0.5 + (float)(rand() / (float)RAND_MAX), 1
+		));
+		l.SetRadius(4000 + rand() % 250);
+	}
+	pointLightShader = new Shader("pointLightVertex.glsl", "pointLightFragment.glsl");
+	combineShader = new Shader("combineVertex.glsl", "combineFragment.glsl");
+	if (!pointLightShader->LoadSuccess() || !combineShader->LoadSuccess()){
+		return;
+	}
+	glGenFramebuffers(1, &bufferFBO);
+	glGenFramebuffers(1, &pointLightFBO);
+	GLenum buffers[2] = { GL_COLOR_ATTACHMENT0,GL_COLOR_ATTACHMENT1 };
+	GenerateScreenTexture(bufferDepthTex, true);
+	GenerateScreenTexture(bufferColourTex);
+	GenerateScreenTexture(bufferNormalTex);
+	GenerateScreenTexture(lightDiffuseTex);
+	GenerateScreenTexture(lightSpecularTex);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, bufferFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+	GL_TEXTURE_2D, bufferColourTex, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1,
+	GL_TEXTURE_2D, bufferNormalTex, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+	GL_TEXTURE_2D, bufferDepthTex, 0);
+	glDrawBuffers(2, buffers);
+
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+		return;
+		
+	}
+	glBindFramebuffer(GL_FRAMEBUFFER, pointLightFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+	GL_TEXTURE_2D, lightDiffuseTex, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1,
+	GL_TEXTURE_2D, lightSpecularTex, 0);
+	glDrawBuffers(2, buffers);
+
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+		return;
+	}
+	
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
+
+
+
+
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
 	glEnable(GL_BLEND);
@@ -163,8 +231,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	
 	
 
-
-	SetupWaterFBOs();
+	
 	std::vector<Vector2> positions;
 	positions.emplace_back(Vector2(0, 0));
 	positions.emplace_back(Vector2(0, heightMap->GetHeightMapSize().z));
@@ -252,7 +319,100 @@ Renderer::~Renderer(void) {
 	delete particles;*/
 }
 
+void Renderer::GenerateScreenTexture(GLuint& into, bool depth) {
+	glGenTextures(1, &into);
+	glBindTexture(GL_TEXTURE_2D, into);
+	
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
+	GLuint format = depth ? GL_DEPTH_COMPONENT24 : GL_RGBA8;
+	GLuint type = depth ? GL_DEPTH_COMPONENT : GL_RGBA;
+	
+	glTexImage2D(GL_TEXTURE_2D, 0,
+			format, width, height, 0, type, GL_UNSIGNED_BYTE, NULL);
+
+		glBindTexture(GL_TEXTURE_2D, 0);
+
+}
+
+void Renderer::DrawPointLights() {
+	glBindFramebuffer(GL_FRAMEBUFFER, pointLightFBO);
+	BindShader(pointLightShader);
+	glClearColor(0, 0, 0, 1);
+	glClear(GL_COLOR_BUFFER_BIT);
+	glBlendFunc(GL_ONE, GL_ONE);
+	glCullFace(GL_FRONT);
+	glDepthFunc(GL_ALWAYS);
+	glDepthMask(GL_FALSE);
+
+	glUniform1i(glGetUniformLocation(
+	pointLightShader->GetProgram(), "depthTex"), 0);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, bufferDepthTex);
+	
+	glUniform1i(glGetUniformLocation(
+	pointLightShader->GetProgram(), "normTex"), 1);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, bufferNormalTex);
+	
+	glUniform3fv(glGetUniformLocation(pointLightShader->GetProgram(),
+		"cameraPos"), 1, (float*)&camera->GetPosition());
+	
+	glUniform2f(glGetUniformLocation(pointLightShader->GetProgram(),
+		"pixelSize"), 1.0f / width, 1.0f / height);
+	
+	Matrix4 invViewProj = (projMatrix * viewMatrix).Inverse();
+	glUniformMatrix4fv(glGetUniformLocation(
+	pointLightShader->GetProgram(), "inverseProjView"),
+	1, false, invViewProj.values);
+
+	UpdateShaderMatrices();
+	for (int i = 0; i < LIGHT_NUM; ++i) {
+		 Light & l = pointLights[i];
+		 SetShaderLight(l);
+		 sphere->Draw();
+		
+	}
+	
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glCullFace(GL_BACK);
+	glDepthFunc(GL_LEQUAL);
+	
+	glDepthMask(GL_TRUE);
+	
+	glClearColor(0.2f, 0.2f, 0.2f, 1);
+	
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+}
+
+void Renderer::CombineBuffers() {
+	BindShader(combineShader);
+	 modelMatrix.ToIdentity();
+	 viewMatrix.ToIdentity();
+	 projMatrix.ToIdentity();
+	 UpdateShaderMatrices();
+	
+	glUniform1i(glGetUniformLocation(
+	combineShader->GetProgram(), "diffuseTex"), 0);
+	 glActiveTexture(GL_TEXTURE0);
+	 glBindTexture(GL_TEXTURE_2D, bufferColourTex);
+	
+	glUniform1i(glGetUniformLocation(
+		combineShader->GetProgram(), "diffuseLight"), 1);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, lightDiffuseTex);
+	
+	glUniform1i(glGetUniformLocation(
+		combineShader->GetProgram(), "specularLight"), 2);
+	 glActiveTexture(GL_TEXTURE2);
+	 glBindTexture(GL_TEXTURE_2D, lightSpecularTex);
+	
+	deferQuad->Draw();
+}
 
 void Renderer::DrawSkybox() {
 	glDepthMask(GL_FALSE);
@@ -478,8 +638,14 @@ void Renderer::RenderSpiders() {
 }
 
 void Renderer::RenderScene() {
+	glBindBuffer(GL_UNIFORM_BUFFER, matrixUBO);
+	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / height, 45.0f);
+	glBufferSubData(GL_UNIFORM_BUFFER, 2 * sizeof(Matrix4), sizeof(Matrix4), &(projMatrix.values));
+	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	glBindFramebuffer(GL_FRAMEBUFFER, bufferFBO);
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	
+
 
 
 	glBindBuffer(GL_UNIFORM_BUFFER, matrixUBO);
@@ -495,27 +661,34 @@ void Renderer::RenderScene() {
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, bumpMap);
 
-	glUniform3fv(glGetUniformLocation(shader->GetProgram(), "cameraPos"), 1, (float*)&camera->GetPosition());
-	SetShaderLight(*light);
+	//glUniform3fv(glGetUniformLocation(shader->GetProgram(), "cameraPos"), 1, (float*)&camera->GetPosition());
+	//SetShaderLight(*light);
 	heightMap->Draw();
 
 	
 	//RenderTrees();
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	//glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	//RenderSpiders();
 
 	
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	//glDisable(GL_CULL_FACE);
-	RenderGrass();
+	
 	//glEnable(GL_CULL_FACE);
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
+
+	RenderGrass();
 	RenderReflection();
 	RenderParticles();
-
-
 	RenderPortal();
+
+
+	
+
+	//glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	DrawPointLights();
+	CombineBuffers();
 
 	ImGui();
 	
@@ -761,7 +934,7 @@ void Renderer::RenderPortal() {
 	RenderGrass();
 	RenderParticles();
 
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glBindFramebuffer(GL_FRAMEBUFFER, bufferFBO);
 
 	camera->SetPosition(camera->GetPosition() - Vector3(4000, 0, 0));
 	viewMatrix = camera->BuildViewMatrix();
@@ -821,7 +994,7 @@ void Renderer::RenderReflection() {
 	
 	glUniform1i(glGetUniformLocation(shader->GetProgram(), "clipHeight"), -99999);
 	glUniform1i(glGetUniformLocation(shader->GetProgram(), "clipping"), 0);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glBindFramebuffer(GL_FRAMEBUFFER, bufferFBO);
 	BindShader(guiShader);
 	SetShaderLight(*light);
 	glUniform1f(glGetUniformLocation(guiShader->GetProgram(), "blendFactor"), blendFactor);

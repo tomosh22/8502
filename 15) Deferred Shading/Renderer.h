@@ -2,15 +2,13 @@
 #include "../nclgl/OGLRenderer.h"
 #include <array>
 #include <stack>
-#include "imgui.h"
-#include "imgui_impl_opengl3.h"
+#include "../nclgl/HeightMap.h"
+#include "../nclgl/Camera.h"
+#include "../nclgl/Light.h"
 class HeightMap;
 class Camera;
 class Light;
 class Shader;
-class Particle;
-class MeshMaterial;
-class MeshAnimation;
 
 #define MAX_PARTICLES 10000
 class Renderer :
@@ -18,16 +16,15 @@ class Renderer :
 {
 public:
     Renderer(Window& parent);
-    ~Renderer(void);
+    ~Renderer(void) {};
 
     void RenderScene() override;
     void UpdateScene(float dt) override;
 
-    void RenderParticle(Particle* p);
+    //void RenderParticle(Particle* p);
     void RenderParticles();
     void UpdateParticles(float dt);
     void GenerateParticles(float dt, Vector3 position, int radius);
-    Matrix4 GenerateTransposedMatrix(Particle* p);
 
     void RenderGrass();
 
@@ -38,8 +35,8 @@ public:
     void RenderSpiders();
 
     void DrawSkybox();
+
     
-    void ImGui();
 
     void SetupPortalFBOs();
     void RenderPortal();
@@ -47,13 +44,13 @@ public:
     void FillBuffers();
     void DrawPointLights();
     void CombineBuffers();
-    void GenerateScreenTexture(GLuint &into, bool depth = false);
+    void GenerateScreenTexture(GLuint& into, bool depth = false);
 protected:
     float frameRate;
 
-    HeightMap* heightMap;
+    
     Shader* shader;
-    Camera* camera;
+    
     Light* light;
     float lightIntensity;
     Vector4 lightDiffuseColour;
@@ -68,9 +65,7 @@ protected:
     GLuint textureUBO;
     GLuint textureBind;
 
-    std::array<Particle*,MAX_PARTICLES>* particles;
-    std::stack<Particle*>* aliveParticles;
-    std::stack<Particle*>* deadParticles;
+    
     int particleIndex;
     GLuint particleTexture;
     Shader* particleShader;
@@ -106,7 +101,7 @@ protected:
     Vector4 grassEndColour;
 
     int tesselationLevel;
-    
+
     float timePassed;
 
 
@@ -129,16 +124,7 @@ protected:
     bool reflectGrass;
     bool reflectParticles;
 
-    Mesh* treeMesh;
-    MeshMaterial* treeMat;
-    std::vector<GLuint> treeTextures;
     
-    Mesh* spiderMesh;
-    MeshMaterial* spiderMat;
-    std::vector<GLuint> spiderTextures;
-    MeshAnimation* spiderAnim;
-    int currentFrame;
-    float frameTime;
 
     Shader* animShader;
 
@@ -153,21 +139,26 @@ protected:
     Mesh* portalViewpointQuad;
     Shader* portalShader;
 
-    Shader* pointLightShader;
-    Shader* combineShader;
+    Shader* sceneShader; // Shader to fill our GBuffers
+     Shader * pointlightShader; // Shader to calculate lighting
+     Shader * combineShader; // shader to stick it all together
+    
+      GLuint bufferFBO; //FBO for our G-Buffer pass
+     GLuint bufferColourTex; // Albedo goes here
+     GLuint bufferNormalTex; // Normals go here
+     GLuint bufferDepthTex; // Depth goes here
+    
+      GLuint pointLightFBO; //FBO for our lighting pass
+     GLuint lightDiffuseTex; // Store diffuse lighting
+     GLuint lightSpecularTex;
+     HeightMap* heightMap; // Terrain!
+     Light * pointLights; // Array of lighting data
+     Mesh * sphere; // Light volume
+     Mesh * quad; //To draw a full -screen quad
+     Camera * camera; //Our usual camera
+     GLuint earthTex;
+     GLuint earthBump;
 
-    GLuint bufferFBO;
-    GLuint bufferColourTex;
-    GLuint bufferNormalTex;
-    GLuint bufferDepthTex;
-
-    GLuint pointLightFBO;
-    GLuint lightDiffuseTex;
-    GLuint lightSpecularTex;
-
-    Light* pointLights;
-    Mesh* sphere;
-    Mesh* deferQuad;
 
 };
 
