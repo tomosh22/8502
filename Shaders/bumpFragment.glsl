@@ -20,6 +20,7 @@ in Vertex{
 	vec3 binormal;
 	float fogFactor;
 	vec4 shadowProj;
+	vec3 worldDir;
 } IN;
 
 out vec4 fragColour;
@@ -38,22 +39,22 @@ void main(void){
 	float specFactor = clamp(dot(halfDir,bumpNormal),0,1);
 	specFactor = pow(specFactor,30);
 
-	/*float shadow = 1.0;
+	float shadow = 1.0;
 	vec3 shadowNDC = IN.shadowProj.xyz / IN.shadowProj.w;
-	if(abs(shadowNDC.x)<1 &&
+	if((abs(shadowNDC.x)<1 &&
 		abs(shadowNDC.y) < 1 &&
-		abs(shadowNDC.z) < 1
+		abs(shadowNDC.z) < 1) || true
 	){
 		vec3 biasCoord = shadowNDC * 0.5 + 0.5;
-		float shadowZ = texture(shadowTex,biasCoord).x;
+		float shadowZ = texture(shadowTex,vec3(worldDir)).x;
 		if(shadowZ < biasCoord.z){shadow = 0;}
-	}*/
+	}
 
-	vec3 fragToLight = IN.worldPos - lightPos;
+	/*vec3 fragToLight = IN.worldPos - lightPos;
 	float closestDepth = texture(shadowTex, fragToLight).r;
 	closestDepth *= 2000;
 	float currentDepth = length(fragToLight);
-	float shadow = currentDepth > closestDepth ? 1 : 0;
+	float shadow = currentDepth > closestDepth ? 1 : 0;*/
 
 
 	vec3 surface = (diffuse.rgb * diffuseColour.rgb);

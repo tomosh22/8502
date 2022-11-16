@@ -30,6 +30,7 @@ out Vertex{
 	vec3 binormal;
 	float fogFactor;
 	vec4 shadowProj;
+	vec3 worldDir;
 } OUT;
 
 void main(void){
@@ -61,6 +62,7 @@ void main(void){
 	
 
 	vec3 viewDir = normalize(lightPos - OUT.worldPos);
+	OUT.worldDir = viewDir;
 	vec4 pushVal = vec4(OUT.normal,0)*dot(viewDir,OUT.normal);
 	OUT.shadowProj = shadowMatrix * (worldPos+pushVal);
 }

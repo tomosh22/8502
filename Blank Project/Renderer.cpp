@@ -362,7 +362,7 @@ void Renderer::DrawSkybox() {
 	UpdateShaderMatrices();
 	glUniform1i(glGetUniformLocation(skyboxShader->GetProgram(), "cubeTex"), 0);
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, cubeMap);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, shadowTex);
 	skyboxQuad->Draw();
 	glDepthMask(GL_TRUE);
 }
@@ -603,7 +603,8 @@ void Renderer::DrawShadowScene() {
 		BindShader(shadowShader);
 		glBindBuffer(GL_UNIFORM_BUFFER, matrixUBO);
 		glBufferSubData(GL_UNIFORM_BUFFER, sizeof(Matrix4), sizeof(Matrix4), &(Matrix4::BuildViewMatrix(light->GetPosition(), dirMap.at(i)*100000)));
-		Matrix4 shadowProjMatrix = Matrix4::Perspective(1, 15000, 1, 45);
+		Matrix4 shadowProjMatrix = projMatrix;
+		//Matrix4 shadowProjMatrix = Matrix4::Perspective(1, 15000, 1, 45);
 		glBufferSubData(GL_UNIFORM_BUFFER, 4 * sizeof(Matrix4), sizeof(Matrix4), &(shadowProjMatrix * Matrix4::BuildViewMatrix(light->GetPosition(), dirMap.at(i)* 100000)));
 
 		glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(Matrix4), &(grassQuad->modelMatrix.values));
