@@ -10,11 +10,14 @@ public:
 		this->diffuseColour = diffuseColour;
 		this->specularColour = specularColour;
 		this->radius = radius;
-		intensity = 1;
+		
 	}
 	~Light(void) {};
 	Vector3 GetPosition() const { return position; }
 	void SetPosition(const Vector3& val) { position = val; }
+
+	Vector3 GetStartPosition() const { return startPosition; }
+	void SetStartPosition(const Vector3& val) { startPosition = val; }
 
 	float GetRadius()const { return radius; }
 	void SetRadius(const float& val) { radius = val; }
@@ -31,6 +34,11 @@ public:
 	Vector4 specularColour;
 	float intensity;
 
+
+	void Update(float dt);
+	float angle;
+	float rotationRadius;
+	Vector3 startPosition;
 protected:
 	
 };

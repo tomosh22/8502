@@ -3,8 +3,13 @@ uniform sampler2D diffuseTex;
 uniform sampler2D diffuseLight;
 uniform sampler2D specularLight;
 
+uniform sampler2D depthTex;
+uniform samplerCube cubeTex;
+
 in Vertex {
 vec2 texCoord;
+
+vec3 viewDir;
 } IN;
 
  out vec4 fragColour;
@@ -18,4 +23,8 @@ vec2 texCoord;
  fragColour.xyz += diffuse * light; // lambert
  fragColour.xyz += specular; // Specular
  fragColour.a = 1.0;
+	 if (texture(depthTex, IN.texCoord).x == 1) {
+		 fragColour = texture(cubeTex, normalize(IN.viewDir));
+	 }
+	 //fragColour = vec4(diffuse,1);
  }

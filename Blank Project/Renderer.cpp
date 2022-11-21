@@ -1,4 +1,4 @@
-#include "Renderer.h"
+﻿#include "Renderer.h"
 #include "../nclgl/Light.h"
 #include "../nclgl/Camera.h"
 #include "../nclgl/HeightMap.h"
@@ -15,7 +15,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	frameRate = 0;
 	timePassed = 0;
 	srand(time(0));
-	particleTexture = SOIL_load_OGL_texture(TEXTUREDIR"flame_particle.png", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	particleTexture = SOIL_load_OGL_texture(TEXTUREDIR"particle.tga", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 	
 	grassShader = new Shader("grassVertex.glsl", "grassFragment.glsl","grassGeometry.glsl","grassDomain.glsl","grassHull.glsl");
 	if (!grassShader->LoadSuccess()) {
@@ -122,8 +122,8 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	
 
 	heightMap = new HeightMap(TEXTUREDIR"heightmap.png",true);
-	texture = SOIL_load_OGL_texture(TEXTUREDIR"red_laterite_soil_stones_diff_4k.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
-	bumpMap = SOIL_load_OGL_texture(TEXTUREDIR"red_laterite_soil_stones_nor_gl_4k.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	texture = SOIL_load_OGL_texture(TEXTUREDIR"Barren Reds.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	bumpMap = SOIL_load_OGL_texture(TEXTUREDIR"Barren RedsDOT3.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 	shader = new Shader("bumpVertex.glsl", "bumpFragment.glsl");
 	if (!shader->LoadSuccess() || !particleShader->LoadSuccess() || !texture || !bumpMap) {
 		return;
@@ -136,11 +136,11 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	Vector3 heightMapSize = heightMap->GetHeightMapSize();
 	camera = new Camera(0, 0, Vector3(3500,1000,5500));
 
-	lightIntensity = 1;
+	/*lightIntensity = 1;
 	lightDiffuseColour = Vector4(0.2, 1, 0.2,1);
 	lightSpecularColour = Vector4(0, 1, 0,1);
 	lightRadius = 1000;
-	light = new Light(Vector3(3300, 2000, 5850), lightDiffuseColour * lightIntensity, lightSpecularColour, lightRadius);
+	light = new Light(Vector3(3300, 2000, 5850), lightDiffuseColour * lightIntensity, lightSpecularColour, lightRadius);*/
 	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / height, 45.0f);
 	modelMatrix = Matrix4();
 	modelMatrix.ToIdentity();
@@ -149,18 +149,39 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 
 	sphere = Mesh::LoadFromMeshFile("Sphere.msh");
 	deferQuad = Mesh::GenerateQuad();
+
 	pointLights = new Light[LIGHT_NUM];
+
 	for (int i = 0; i < LIGHT_NUM; i++)
 	{
 		Light& l = pointLights[i];
-		l.SetPosition(Vector3(rand() & (int)heightMap->GetHeightMapSize().x, 2000, rand() % (int)heightMap->GetHeightMapSize().z));
-		l.SetDiffuseColour(Vector4(
-			0.5 + (float)(rand() / (float)RAND_MAX),
-			0.5 + (float)(rand() / (float)RAND_MAX),
-			0.5 + (float)(rand() / (float)RAND_MAX), 1
-		));
-		l.SetRadius(4000 + rand() % 250);
+		
+			l.SetStartPosition(Vector3(rand() & (int)heightMap->GetHeightMapSize().x, (rand() & 100) + 2000, rand() % (int)heightMap->GetHeightMapSize().z));
+			l.SetDiffuseColour(Vector4(
+				0.5 + (float)(rand() / (float)RAND_MAX),
+				0.5 + (float)(rand() / (float)RAND_MAX),
+				0.5 + (float)(rand() / (float)RAND_MAX), 1
+			));
+			l.SetRadius(5000 + rand() % 250);
+			//l.SetRadius(0);
+			l.intensity = 1;
+			l.angle = 0;
+			l.rotationRadius = 5000;
+		
 	}
+
+	
+	pointLights[0].SetPosition(Vector3(3300, 2000, 5900));
+	pointLights[0].SetStartPosition(Vector3(3300, 2000, 5900));
+	pointLights[0].SetDiffuseColour(Vector4(
+		0, 1, 0, 1
+	));
+	pointLights[0].SetRadius(2000);
+	pointLights[0].intensity = 1;
+	pointLights[0].angle = 0;
+	pointLights[0].rotationRadius = -1;
+	
+
 	pointLightShader = new Shader("pointLightVertex.glsl", "pointLightFragment.glsl");
 	combineShader = new Shader("combineVertex.glsl", "combineFragment.glsl");
 	if (!pointLightShader->LoadSuccess() || !combineShader->LoadSuccess()){
@@ -183,6 +204,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
 	GL_TEXTURE_2D, bufferDepthTex, 0);
 	glDrawBuffers(2, buffers);
+	glObjectLabel(GL_FRAMEBUFFER, bufferFBO, -1, std::string("BufferFBO").c_str());
 
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
 		return;
@@ -198,7 +220,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
 		return;
 	}
-	
+	glObjectLabel(GL_FRAMEBUFFER, pointLightFBO, -1, std::string("PointLightFBO").c_str());
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 
@@ -300,7 +322,7 @@ Renderer::~Renderer(void) {
 	delete camera;
 	delete heightMap;
 	delete shader;
-	delete light;
+	//delete light;
 	delete particles;
 	delete particleShader;
 	delete masterParticle;
@@ -392,8 +414,8 @@ void Renderer::DrawPointLights() {
 void Renderer::CombineBuffers() {
 	BindShader(combineShader);
 	 modelMatrix.ToIdentity();
-	 viewMatrix.ToIdentity();
-	 projMatrix.ToIdentity();
+	 //viewMatrix.ToIdentity();
+	 //projMatrix.ToIdentity();
 	 UpdateShaderMatrices();
 	
 	glUniform1i(glGetUniformLocation(
@@ -411,6 +433,16 @@ void Renderer::CombineBuffers() {
 	 glActiveTexture(GL_TEXTURE2);
 	 glBindTexture(GL_TEXTURE_2D, lightSpecularTex);
 	
+	 glUniform1i(glGetUniformLocation(
+		 combineShader->GetProgram(), "depthTex"), 3);
+	 glActiveTexture(GL_TEXTURE3);
+	 glBindTexture(GL_TEXTURE_2D, bufferDepthTex);
+
+	 glUniform1i(glGetUniformLocation(
+		 combineShader->GetProgram(), "cubeTex"), 4);
+	 glActiveTexture(GL_TEXTURE4);
+	 glBindTexture(GL_TEXTURE_CUBE_MAP, cubeMap);
+
 	deferQuad->Draw();
 }
 
@@ -492,7 +524,7 @@ void Renderer::UpdateScene(float dt) {
 		Vector3 aPos = a->modelMatrix.GetPositionVector();
 		Vector3 bPos = b->modelMatrix.GetPositionVector();
 		Vector3 camPos = viewMatrix.GetPositionVector();
-		return Vector3(aPos - camPos).Length() < Vector3(bPos - camPos).Length();
+		return Vector3(aPos - camPos).Length() > Vector3(bPos - camPos).Length();
 		});
 
 	frameTime -= dt;
@@ -502,7 +534,10 @@ void Renderer::UpdateScene(float dt) {
 		currentFrame = (currentFrame + 1) % spiderAnim->GetFrameCount();
 		frameTime += 1.0f / spiderAnim->GetFrameRate();
 	}*/
-	
+	for (int i = 0; i < LIGHT_NUM; i++)
+	{
+		pointLights[i].Update(dt);
+	}
 }
 
 
@@ -821,6 +856,7 @@ void Renderer::SetupPortalFBOs() {
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, portalColour, 0);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, portalDepth, 0);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_TEXTURE_2D, portalDepth, 0);
+	glObjectLabel(GL_FRAMEBUFFER, portalFBO, -1, std::string("PortalFBO").c_str());
 
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE || !reflectionColour || !reflectionDepth) {
 		return;
@@ -855,6 +891,7 @@ void Renderer::SetupWaterFBOs() {
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, reflectionColour, 0);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, reflectionDepth, 0);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_TEXTURE_2D, reflectionDepth, 0);
+	glObjectLabel(GL_FRAMEBUFFER, reflectionFBO, -1, std::string("ReflectionFBO").c_str());
 
 	glGenTextures(1, &refractionColour);
 	glBindTexture(GL_TEXTURE_2D, refractionColour);
@@ -878,6 +915,7 @@ void Renderer::SetupWaterFBOs() {
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, refractionColour, 0);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, refractionDepth, 0);
 	//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_TEXTURE_2D, refractionDepth, 0);
+	glObjectLabel(GL_FRAMEBUFFER, refractionFBO, -1, std::string("RefractionFBO").c_str());
 	
 
 
@@ -996,7 +1034,7 @@ void Renderer::RenderReflection() {
 	glUniform1i(glGetUniformLocation(shader->GetProgram(), "clipping"), 0);
 	glBindFramebuffer(GL_FRAMEBUFFER, bufferFBO);
 	BindShader(guiShader);
-	SetShaderLight(*light);
+	//SetShaderLight(*light);
 	glUniform1f(glGetUniformLocation(guiShader->GetProgram(), "blendFactor"), blendFactor);
 	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(Matrix4), &(waterQuad->modelMatrix.values));
 	glUniform1i(glGetUniformLocation(guiShader->GetProgram(), "reflectTex"), 0);
