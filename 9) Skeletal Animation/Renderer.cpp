@@ -48,6 +48,7 @@ void Renderer::UpdateScene(float dt){
 		frameTime += 1.0f / anim->GetFrameRate();
 	}
 	
+	
 }
 
 void Renderer::RenderScene() {

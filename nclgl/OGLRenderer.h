@@ -57,7 +57,8 @@ public:
 	void			SwapBuffers();
 
 	bool			HasInitialised() const;	
-	
+	Shader* currentShader;
+	void SetCurrentShader(Shader* s) { currentShader = s; }
 protected:
 	virtual void	Resize(int x, int y);	
 	void			UpdateShaderMatrices();
@@ -85,7 +86,7 @@ protected:
 	void SetShaderLight(const Light& l);
 
 private:
-	Shader* currentShader;	
+		
 	HDC		deviceContext;	//...Device context?
 	HGLRC	renderContext;	//Permanent Rendering Context
 #ifdef _DEBUG

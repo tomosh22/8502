@@ -4,6 +4,9 @@
 #include <stack>
 #include "imgui.h"
 #include "imgui_impl_opengl3.h"
+#include "../nclgl/SceneNode.h"
+#include "../nclgl/MeshAnimation.h"
+#include "../nclgl/MeshMaterial.h"
 class HeightMap;
 class Camera;
 class Light;
@@ -48,6 +51,8 @@ public:
     void DrawPointLights();
     void CombineBuffers();
     void GenerateScreenTexture(GLuint &into, bool depth = false);
+
+    void DrawNode(SceneNode* n);
 protected:
     float frameRate;
 
@@ -169,5 +174,8 @@ protected:
     Mesh* sphere;
     Mesh* deferQuad;
 
+    SceneNode* root;
+    SceneNode* roleT;
+    Shader* skinningShader;
 };
 

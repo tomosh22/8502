@@ -4,10 +4,13 @@
 #include "Vector4.h"
 #include "Mesh.h"
 #include <vector>
+#include "../nclgl/MeshAnimation.h"
+#include "../nclgl/MeshMaterial.h"
 class SceneNode
 {
 public:
-	SceneNode(Mesh* m = NULL, Vector4 colour = Vector4(1, 1, 1, 1));
+	SceneNode(GLuint matrixUBO,Mesh* m = NULL, Vector4 colour = Vector4(1, 1, 1, 1));
+	SceneNode() {};
 	~SceneNode(void);
 
 	void SetTransform(const Matrix4& matrix) { transform = matrix; }
@@ -25,7 +28,7 @@ public:
 
 	void AddChild(SceneNode* s);
 	virtual void Update(float dt);
-	virtual void Draw(const OGLRenderer& r);
+	virtual void Draw(OGLRenderer& r);
 
 	std::vector<SceneNode*>::const_iterator GetChildIteratorStart() { return children.begin(); }
 	std::vector<SceneNode*>::const_iterator GetChildIteratorEnd() { return children.end(); }
@@ -43,9 +46,19 @@ public:
 		return a->distanceFromCamera < b->distanceFromCamera;
 	}
 
+
+
+	std::vector<GLuint> matTextures;
+	MeshAnimation* anim;
+	MeshMaterial* mat;
+	Shader* shader;
 protected:
 	SceneNode* parent;
 	Mesh* mesh;
+	int currentFrame;
+	float frameTime;
+	GLuint matrixUBO;
+	
 	Matrix4 worldTransform;
 	Matrix4 transform;
 	Vector3 modelScale;
@@ -54,5 +67,6 @@ protected:
 	float distanceFromCamera;
 	float boundingRadius;
 	GLuint texture;
+	
 };
 

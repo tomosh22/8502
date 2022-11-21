@@ -6,7 +6,7 @@ class CubeRobot :
     public SceneNode
 {
 public:
-    CubeRobot(Mesh* cube, Vector3 pos = Vector3(0, 0, 0));
+    CubeRobot(GLuint matrixUBO, Mesh* cube, Vector3 pos = Vector3(0, 0, 0));
     ~CubeRobot(void) {};
     void Update(float dt) override;
 protected:

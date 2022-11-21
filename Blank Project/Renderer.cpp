@@ -8,6 +8,7 @@
 #include "imgui.h"
 #include "imgui_impl_opengl3.h"
 #include "imgui_impl_win32.h"
+
 #define LIGHT_NUM 32
 Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	
@@ -314,8 +315,47 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	ImGui_ImplWin32_Init(parent.GetHandle());
 	ImGui_ImplOpenGL3_Init("#version 330");
 	
-
+	skinningShader = new Shader("skinningVertex.glsl", "skinningFragment.glsl");
+	if (!skinningShader->LoadSuccess()) {
+		return;
+	}
+	root = new SceneNode(matrixUBO);
+	roleT = new SceneNode(matrixUBO);
+	roleT->SetMesh(Mesh::LoadFromMeshFile("Role_T.msh"));
+	roleT->mat = new MeshMaterial("Role_T.mat");
+	roleT->anim = new MeshAnimation("Role_T.anm");
+	roleT->shader = skinningShader;
+	for (int i = 0; i < roleT->GetMesh()->GetSubMeshCount(); i++)
+	{
+		const MeshMaterialEntry* matEntry = roleT->mat->GetMaterialForLayer(i);
+		const std::string* filename = nullptr;
+		matEntry->GetEntry("Diffuse", &filename);
+		std::string path = TEXTUREDIR + *filename;
+		GLuint texID = SOIL_load_OGL_texture(path.c_str(), SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y);
+		roleT->matTextures.emplace_back(texID);
+	}
+	Matrix4 matrix;
+	matrix.ToIdentity();
+	roleT->SetTransform(matrix);
+	roleT->SetTransform(roleT->GetTransform() * Matrix4::Translation(Vector3(5000, 1000, 5000)));
+	roleT->SetTransform(roleT->GetTransform() *  Matrix4::Scale(Vector3(500, 500, 500)));
+	
+	root->AddChild(roleT);
 	init = true;
+}
+
+void Renderer::DrawNode(SceneNode* n) {
+	if (n->GetMesh()) {
+		Matrix4 model = n->GetWorldTransform() * Matrix4::Scale(n->GetModelScale());
+		glUniformMatrix4fv(glGetUniformLocation(shader->GetProgram(), "modelMatrix"), 1, false, model.values);
+		glUniform4fv(glGetUniformLocation(shader->GetProgram(), "nodeColour"), 1, (float*)&n->GetColour());
+		glUniform1i(glGetUniformLocation(shader->GetProgram(), "useTexture"), 1);
+		//glUniformHandleui64ARB(glGetUniformLocation(this->shader->GetProgram(), "diffuseTex"));
+		n->Draw(*this);
+	}
+	for (vector<SceneNode*>::const_iterator i = n->GetChildIteratorStart(); i != n->GetChildIteratorEnd(); i++) {
+		DrawNode(*i);
+	}
 }
 
 Renderer::~Renderer(void) {
@@ -529,6 +569,8 @@ void Renderer::UpdateScene(float dt) {
 
 	frameTime -= dt;
 
+	root->Update(dt);
+
 	//todo uncomment for spider animation
 	/*while (frameTime < 0.0f) {
 		currentFrame = (currentFrame + 1) % spiderAnim->GetFrameCount();
@@ -538,6 +580,8 @@ void Renderer::UpdateScene(float dt) {
 	{
 		pointLights[i].Update(dt);
 	}
+
+
 }
 
 
@@ -718,7 +762,7 @@ void Renderer::RenderScene() {
 	RenderParticles();
 	RenderPortal();
 
-
+	DrawNode(root);
 	
 
 	//glBindFramebuffer(GL_FRAMEBUFFER, 0);
