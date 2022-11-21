@@ -49,6 +49,7 @@ public:
 
     void FillBuffers();
     void DrawPointLights();
+    void DrawDirectionalLights();
     void CombineBuffers();
     void GenerateScreenTexture(GLuint &into, bool depth = false);
 

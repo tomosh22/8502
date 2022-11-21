@@ -400,6 +400,8 @@ void Renderer::GenerateScreenTexture(GLuint& into, bool depth) {
 
 }
 
+
+
 void Renderer::DrawPointLights() {
 	glBindFramebuffer(GL_FRAMEBUFFER, pointLightFBO);
 	BindShader(pointLightShader);

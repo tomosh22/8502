@@ -21,31 +21,31 @@ in Vertex{
 
 out vec4 fragColour[2];
 void main(void){
-	/*vec3 incident = normalize(lightPos - IN.worldPos);
-	vec3 viewDir = normalize(cameraPos - IN.worldPos);
-	vec3 halfDir = normalize(incident + viewDir);*/
-
+	
 	
 
-	/*vec4 diffuse = texture(diffuseTex, IN.texCoord);
+	mat3 TBN = mat3(normalize(IN.tangent), normalize(IN.binormal), normalize(IN.normal));
+	vec3 incident = normalize(vec3(0,1,0));
+	vec3 viewDir = normalize(cameraPos - IN.worldPos);
+	vec3 halfDir = normalize(incident + viewDir);
+	vec4 diffuse = texture(diffuseTex, IN.texCoord);
 	vec3 bumpNormal = texture(bumpTex, IN.texCoord).rgb;
 	bumpNormal = normalize(TBN * normalize(bumpNormal * 2 - 1));
 	float lambert = max(dot(incident, bumpNormal),0);
-	float distance = length(lightPos - IN.worldPos);
-	float attenuation = 1 - clamp(distance/lightRadius,0,1);
 	float specFactor = clamp(dot(halfDir,bumpNormal),0,1);
 	specFactor = pow(specFactor,30);
-	vec3 surface = (diffuse.rgb * diffuseColour.rgb);
-	fragColour.rgb = surface * lambert * attenuation;
-	fragColour.rgb += (specularColour.rgb * specFactor)*attenuation * 0.33;
-	fragColour.rgb += surface * 0.1;
-	fragColour.a = diffuse.a;
-	fragColour += diffuse * 0.5;*/
+	vec3 surface = (diffuse.rgb * vec3(1,1,1));
+	fragColour[0].rgb = surface * lambert;
+	fragColour[0].rgb += (vec3(1,1,1) * specFactor) * 0.33;
+	fragColour[0].rgb += surface * 0.1;
+	fragColour[0].a = diffuse.a;
+	fragColour[0] += diffuse * 0.5;
+	//fragColour[0] *= 100;
 
-	mat3 TBN = mat3(normalize(IN.tangent), normalize(IN.binormal), normalize(IN.normal));
+	
 	vec3 normal = texture2D(bumpTex,IN.texCoord).rgb * 2 - 1;
 	normal = normalize(TBN * normalize(normal));
-	fragColour[0] = texture2D(diffuseTex,IN.texCoord);
+	//fragColour[0] = texture2D(diffuseTex,IN.texCoord);
 	fragColour[1] = vec4(normal.xyz*0.5 + 0.5,1);
 
 

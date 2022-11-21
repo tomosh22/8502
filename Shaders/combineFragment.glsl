@@ -15,6 +15,10 @@ vec3 viewDir;
  out vec4 fragColour;
 
  void main(void) {
+ if (texture(depthTex, IN.texCoord).x == 1) {
+		 fragColour = texture(cubeTex, normalize(IN.viewDir));
+		 return;
+	 }
  vec3 diffuse = texture(diffuseTex , IN.texCoord ).xyz;
  vec3 light = texture(diffuseLight , IN.texCoord ).xyz;
  vec3 specular = texture(specularLight , IN.texCoord ).xyz;
@@ -23,8 +27,6 @@ vec3 viewDir;
  fragColour.xyz += diffuse * light; // lambert
  fragColour.xyz += specular; // Specular
  fragColour.a = 1.0;
-	 if (texture(depthTex, IN.texCoord).x == 1) {
-		 fragColour = texture(cubeTex, normalize(IN.viewDir));
-	 }
+	 
 	 //fragColour = vec4(diffuse,1);
  }
