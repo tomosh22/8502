@@ -24,7 +24,7 @@ uniform float lightRadius;
 
  float dist = length(lightPos - worldPos );
  float atten = 1.0 - clamp(dist / lightRadius , 0.0, 1.0);
-
+ //dist = dist / 1000; atten = 1/(dist*dist);
  if(atten == 0.0) {
  discard;
  }

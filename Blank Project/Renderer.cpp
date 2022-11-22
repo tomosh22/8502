@@ -79,9 +79,9 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	treeMesh->modelMatrix = treeMesh->modelMatrix * Matrix4::Scale(Vector3(200, 200, 200));*/
 
 
-	/*spiderMesh = Mesh::LoadFromMeshFile("spider2.msh");
-	spiderMat = new MeshMaterial("spider2.mat");
-	spiderAnim = new MeshAnimation("spider2.anm");
+	spiderMesh = Mesh::LoadFromMeshFile("BlackWidow.msh");
+	spiderMat = new MeshMaterial("BlackWidow.mat");
+	spiderAnim = new MeshAnimation("BlackWidow.anm");
 	for (int i = 0; i < spiderMesh->GetSubMeshCount(); i++)
 	{
 		const MeshMaterialEntry* matEntry = spiderMat->GetMaterialForLayer(i);
@@ -92,8 +92,8 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 		spiderTextures.emplace_back(texID);
 	}
 	spiderMesh->modelMatrix.ToIdentity();
-	spiderMesh->modelMatrix = spiderMesh->modelMatrix * Matrix4::Translation(Vector3(2000, 400, 5800));
-	spiderMesh->modelMatrix = spiderMesh->modelMatrix * Matrix4::Scale(Vector3(200, 200, 200));*/
+	spiderMesh->modelMatrix = spiderMesh->modelMatrix * Matrix4::Translation(Vector3(4000, 1000, 4000));
+	spiderMesh->modelMatrix = spiderMesh->modelMatrix * Matrix4::Scale(Vector3(100, 100, 100));
 
 	
 	
@@ -254,14 +254,14 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	glUniformBlockBinding(portalShader->GetProgram(), glGetUniformBlockIndex(portalShader->GetProgram(), "matrices"), 0);
 
 	glBindBufferBase(GL_UNIFORM_BUFFER, 0, matrixUBO);
-	glBufferData(GL_UNIFORM_BUFFER, 4 * sizeof(Matrix4), NULL, GL_STATIC_DRAW);
+	glBufferData(GL_UNIFORM_BUFFER, 4 * sizeof(Matrix4) + sizeof(Vector4) + sizeof(bool), NULL, GL_STATIC_DRAW);
 
 
 
 	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(Matrix4), &(modelMatrix.values));
 	glBufferSubData(GL_UNIFORM_BUFFER, 2 * sizeof(Matrix4), sizeof(Matrix4), &(projMatrix.values));
 
-	
+	fogColour = Vector4(0.4, 0.2, 0.2, 1);
 	
 
 	
@@ -313,8 +313,11 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 
 
 	
-
-
+	skinningShader = new Shader("skinningVertex.glsl", "skinningFragment.glsl");
+	if (!skinningShader->LoadSuccess()) {
+		return;
+	}
+	glUniformBlockBinding(skinningShader->GetProgram(), glGetUniformBlockIndex(skinningShader->GetProgram(), "matrices"), 0);
 
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
@@ -325,10 +328,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	ImGui_ImplWin32_Init(parent.GetHandle());
 	ImGui_ImplOpenGL3_Init("#version 330");
 	
-	skinningShader = new Shader("skinningVertex.glsl", "skinningFragment.glsl");
-	if (!skinningShader->LoadSuccess()) {
-		return;
-	}
+	
 	root = new SceneNode(matrixUBO);
 	roleT = new SceneNode(matrixUBO);
 	roleT->SetMesh(Mesh::LoadFromMeshFile("Role_T.msh"));
@@ -352,9 +352,49 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	
 	root->AddChild(roleT);
 
+	
+
 	lightDir = Vector3(0, 1, 0);
 	lightDiffuse = Vector4(1, 1, 1, 1);
 	lightSpecular = Vector4(1, 1, 1, 1);
+
+	drawNormals = false;
+
+	freeCam = false;
+	checkpoints = 6;
+	currentCheckpoint = 0;
+	destChosen = false;
+	cameraTime = 0;
+
+	cameraStates = new CameraState[checkpoints];
+
+	cameraStates[0].pos = Vector3(4280, 850, 4673);
+	cameraStates[0].pitch = -44;
+	cameraStates[0].yaw = 12;
+
+	cameraStates[1].pos = Vector3(5030, 504, 3635);
+	cameraStates[1].pitch = -18;
+	cameraStates[1].yaw = 91;
+
+	cameraStates[2].pos = Vector3(4140, 1215, 3518);
+	cameraStates[2].pitch = -9;
+	cameraStates[2].yaw = 159;
+
+	cameraStates[3].pos = Vector3(5127, 2046, 6602);
+	cameraStates[3].pitch = -21;
+	cameraStates[3].yaw = 13;
+
+	cameraStates[4].pos = Vector3(1377, 2337, 7852);
+	cameraStates[4].pitch = -17;
+	cameraStates[4].yaw = 333;
+
+	cameraStates[5].pos = Vector3(3562, 9463, 7360);
+	cameraStates[5].pitch = -68;
+	cameraStates[5].yaw = 0;
+
+	camera->position = cameraStates[0].pos;
+	camera->pitch = cameraStates[0].pitch;
+	camera->yaw = cameraStates[0].yaw;
 
 	init = true;
 }
@@ -554,7 +594,30 @@ void Renderer::UpdateParticles(float dt) {
 	}
 }
 
+
+void Renderer::CameraRoutine(float dt, CameraState deltaState, float time) {
+	
+
+	camera->position += deltaState.pos / time;
+	camera->pitch += deltaState.pitch / time;
+	camera->yaw += deltaState.yaw / time;
+}
+
+
 void Renderer::UpdateScene(float dt) {
+
+	if (!freeCam) {
+		CameraState startState = cameraStates[currentCheckpoint];
+		CameraState endState = cameraStates[currentCheckpoint+1];
+		if(dt < 1)cameraTime += dt;
+		float t = cameraTime / 5;
+		camera->position = Vector3::Lerp(startState.pos, endState.pos, t);
+		camera->pitch = startState.pitch + (endState.pitch - startState.pitch) * t;
+		camera->yaw = startState.yaw + (endState.yaw - startState.yaw) * t;
+		if (t > 1) { currentCheckpoint++; cameraTime = 0; }
+		if (currentCheckpoint == checkpoints-1)freeCam = true;
+	}
+
 	timePassed += dt;
 	frameRate = 1 / dt;
 	//std::cout << (float)1 / dt << " fps\n" << particleIndex << " particles\n";
@@ -572,6 +635,8 @@ void Renderer::UpdateScene(float dt) {
 	//std::cout << camera->GetPosition() << '\n';
 	glBindBuffer(GL_UNIFORM_BUFFER, matrixUBO);
 	glBufferSubData(GL_UNIFORM_BUFFER, sizeof(Matrix4), sizeof(Matrix4), &(viewMatrix.values));
+	glBufferSubData(GL_UNIFORM_BUFFER, 4 * sizeof(Matrix4), sizeof(Vector4), &(fogColour));
+	glBufferSubData(GL_UNIFORM_BUFFER, 4 * sizeof(Matrix4) + sizeof(Vector4), sizeof(bool), &(drawNormals));
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 	GenerateParticles(dt, Vector3(4000, 500, 4000), particleRadius);
 	UpdateParticles(dt);
@@ -710,9 +775,9 @@ void Renderer::RenderTrees() {
 }
 
 void Renderer::RenderSpiders() {
-	BindShader(animShader);
-	SetShaderLight(*light);
-	glUniform3fv(glGetUniformLocation(shader->GetProgram(), "cameraPos"), 1, (float*)&camera->GetPosition());
+	BindShader(skinningShader);
+	//SetShaderLight(*light);
+	//glUniform3fv(glGetUniformLocation(shader->GetProgram(), "cameraPos"), 1, (float*)&camera->GetPosition());
 	UpdateShaderMatrices();
 	glBindBuffer(GL_UNIFORM_BUFFER, matrixUBO);
 	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(Matrix4), &(spiderMesh->modelMatrix.values));
@@ -787,7 +852,7 @@ void Renderer::RenderScene() {
 	
 	//RenderTrees();
 	//glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	//RenderSpiders();
+	RenderSpiders();
 
 	
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -845,6 +910,10 @@ void Renderer::ImGui() {
 	cameraPosString.append(" X " + std::to_string(camera->GetPosition().z));*/
 	//ImGui::Text(cameraPosString.c_str());
 	ImGui::SliderFloat3("Camera Position", (float*)&(camera->position), 0, 10000);
+	ImGui::SliderFloat("Camera Yaw", (float*)&(camera->yaw), 0, 360);
+	ImGui::SliderFloat("Camera Pitch", (float*)&(camera->pitch), -90, 90);
+	ImGui::ColorEdit4("Fog Colour", (float*)&fogColour);
+	ImGui::Checkbox("Draw Normals as Colours", &drawNormals);
 	if (ImGui::TreeNode("Particles")) {
 		ImGui::Text(("Particle Count: " + std::to_string(particleIndex)).c_str());
 		ImGui::SliderFloat("Lifetime", &particleLifetime, 0, 10);
@@ -1073,7 +1142,7 @@ void Renderer::RenderPortal() {
 	heightMap->Draw();
 
 
-	//RenderSpiders();
+	RenderSpiders();
 	//RenderReflection();
 	RenderGrass();
 	RenderParticles();
@@ -1140,7 +1209,7 @@ void Renderer::RenderReflection() {
 	
 	heightMap->Draw();
 	
-	//RenderSpiders();
+	RenderSpiders();
 	if(reflectGrass)RenderGrass();
 	if(reflectParticles)RenderParticles();
 	BindShader(shader);

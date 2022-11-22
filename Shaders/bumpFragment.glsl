@@ -17,6 +17,15 @@ uniform float lightRadius;
 uniform vec3 lightDir;
 
 
+layout(std140) uniform matrices{
+	mat4 modelMatrix;
+	mat4 viewMatrix;
+	mat4 projMatrix;
+	mat4 modelViewMatrix;
+	vec4 fogColour;
+	bool drawNormals;
+};
+
 in Vertex{
 	vec2 texCoord;
 	vec4 colour;
@@ -58,6 +67,10 @@ void main(void){
 	fragColour[0] += diffuse * 0.5;
 	//fragColour[0] *= 100;
 
+
+
+
+
 	
 	vec3 normal = bumpNormal;
 	normal = normalize(TBN * normalize(normal));
@@ -67,7 +80,9 @@ void main(void){
 
 	//fragColour = vec4(1, 0, 0, 1);
 
-	fragColour[0] = mix(vec4(0.4, 0.2, 0.2,1), fragColour[0], IN.fogFactor);
+	fragColour[0] = mix(fogColour, fragColour[0], IN.fogFactor);
 	//fragColour = vec4(IN.fogFactor, IN.fogFactor, IN.fogFactor,1);
-
+	if(drawNormals){
+		fragColour[0] = vec4(bumpNormal.xyz*0.5 + 0.5,1);
+	}
 }

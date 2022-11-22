@@ -23,7 +23,7 @@ vec3 viewDir;
  vec3 light = texture(diffuseLight , IN.texCoord ).xyz;
  vec3 specular = texture(specularLight , IN.texCoord ).xyz;
 
- fragColour.xyz = diffuse * 0.5; // ambient
+ fragColour.xyz = diffuse * 0.8; // ambient
  fragColour.xyz += diffuse * light; // lambert
  fragColour.xyz += specular; // Specular
  fragColour.a = 1.0;

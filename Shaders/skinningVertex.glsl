@@ -5,6 +5,8 @@ layout(std140) uniform matrices{
 	mat4 viewMatrix;
 	mat4 projMatrix;
 	mat4 modelViewMatrix;
+	vec4 fogColour;
+	bool drawNormals;
 };
 
 in vec3 position;
@@ -24,6 +26,7 @@ out Vertex{
 	vec3 worldPos;
 	vec3 tangent;
 	vec3 binormal;
+	float fogFactor;
 } OUT;
 
 void main(void){
@@ -43,5 +46,7 @@ void main(void){
 	OUT.texCoord = texCoord;
 	//OUT.jointWeights = jointWeights;
 
-
+	float distance = length((viewMatrix * modelMatrix*vec4(position,1)).xyz);
+	OUT.fogFactor = exp(-pow((distance /3000), 5));
+	OUT.fogFactor = clamp(OUT.fogFactor, 0.0, 1.0);
 }

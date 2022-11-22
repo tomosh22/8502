@@ -10,6 +10,8 @@ layout(std140) uniform matrices{
 	mat4 viewMatrix;
 	mat4 projMatrix;
 	mat4 modelViewMatrix;
+	vec4 fogColour;
+	bool drawNormals;
 };
 
 in vec3 position;
