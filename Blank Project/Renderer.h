@@ -58,6 +58,7 @@ protected:
     float frameRate;
 
     HeightMap* heightMap;
+    
     Shader* shader;
     Camera* camera;
     Light* light;
@@ -65,8 +66,13 @@ protected:
     Vector4 lightDiffuseColour;
     Vector4 lightSpecularColour;
     int lightRadius;
-    GLuint texture;
-    GLuint bumpMap;
+    GLuint texture0;
+    GLuint texture1;
+    GLuint texture2;
+    GLuint bumpMap0;
+    GLuint bumpMap1;
+    GLuint bumpMap2;
+    GLuint splatMap;
 
     GLuint matrixUBO;
     GLuint columnUBO;
@@ -178,5 +184,9 @@ protected:
     SceneNode* root;
     SceneNode* roleT;
     Shader* skinningShader;
+
+    Vector3 lightDir;
+    Vector4 lightDiffuse;
+    Vector4 lightSpecular;
 };
 

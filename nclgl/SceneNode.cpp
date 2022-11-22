@@ -66,7 +66,6 @@ void SceneNode::Update(float dt) {
 		while (frameTime < 0.0f) {
 			currentFrame = (currentFrame + 1) % anim->GetFrameCount();
 			frameTime += 1.0f / anim->GetFrameRate();
-			std::cout << frameTime;
 		}
 	}
 	else { worldTransform = transform; }

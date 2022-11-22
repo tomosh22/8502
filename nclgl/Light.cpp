@@ -1,6 +1,6 @@
 #include "Light.h"
 void Light::Update(float dt) {
-	return;
+	//return;
 	if (this->rotationRadius == -1) {
 		return;
 	}

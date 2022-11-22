@@ -123,16 +123,26 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	
 
 	heightMap = new HeightMap(TEXTUREDIR"heightmap.png",true);
-	texture = SOIL_load_OGL_texture(TEXTUREDIR"Barren Reds.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
-	bumpMap = SOIL_load_OGL_texture(TEXTUREDIR"Barren RedsDOT3.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	texture0 = SOIL_load_OGL_texture(TEXTUREDIR"Barren Reds.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	texture1 = SOIL_load_OGL_texture(TEXTUREDIR"red_laterite_soil_stones_diff_4k.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	texture2 = SOIL_load_OGL_texture(TEXTUREDIR"Water 0341.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	bumpMap0 = SOIL_load_OGL_texture(TEXTUREDIR"Barren RedsDOT3.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	bumpMap1 = SOIL_load_OGL_texture(TEXTUREDIR"red_laterite_soil_stones_nor_gl_4k.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	bumpMap2 = SOIL_load_OGL_texture(TEXTUREDIR"Water 0341normal.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	splatMap = SOIL_load_OGL_texture(TEXTUREDIR"splatmap.png", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	
 	shader = new Shader("bumpVertex.glsl", "bumpFragment.glsl");
-	if (!shader->LoadSuccess() || !particleShader->LoadSuccess() || !texture || !bumpMap) {
+	if (!shader->LoadSuccess() || !particleShader->LoadSuccess() || !texture0 || !bumpMap0) {
 		return;
 	}
 	
 	glUniform1i(glGetUniformLocation(shader->GetProgram(), "clipHeight"), -99999);
-	SetTextureRepeating(texture, true);
-	SetTextureRepeating(bumpMap, true);
+	SetTextureRepeating(texture0, true);
+	SetTextureRepeating(texture1, true);
+	SetTextureRepeating(texture2, true);
+	SetTextureRepeating(bumpMap0, true);
+	SetTextureRepeating(bumpMap1, true);
+	SetTextureRepeating(bumpMap2, true);
 
 	Vector3 heightMapSize = heightMap->GetHeightMapSize();
 	camera = new Camera(0, 0, Vector3(3500,1000,5500));
@@ -341,6 +351,11 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	roleT->SetTransform(roleT->GetTransform() *  Matrix4::Scale(Vector3(500, 500, 500)));
 	
 	root->AddChild(roleT);
+
+	lightDir = Vector3(0, 1, 0);
+	lightDiffuse = Vector4(1, 1, 1, 1);
+	lightSpecular = Vector4(1, 1, 1, 1);
+
 	init = true;
 }
 
@@ -734,16 +749,39 @@ void Renderer::RenderScene() {
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 	DrawSkybox();
 	BindShader(shader);
-	glUniform1i(glGetUniformLocation(shader->GetProgram(), "diffuseTex"), 0);
+	glUniform1i(glGetUniformLocation(shader->GetProgram(), "diffuseTex0"), 0);
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, texture);
+	glBindTexture(GL_TEXTURE_2D, texture0);
 
-	glUniform1i(glGetUniformLocation(shader->GetProgram(), "bumpTex"), 1);
+	glUniform1i(glGetUniformLocation(shader->GetProgram(), "bumpTex0"), 1);
 	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, bumpMap);
+	glBindTexture(GL_TEXTURE_2D, bumpMap0);
+
+	glUniform1i(glGetUniformLocation(shader->GetProgram(), "diffuseTex1"), 2);
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, texture1);
+
+	glUniform1i(glGetUniformLocation(shader->GetProgram(), "bumpTex1"), 3);
+	glActiveTexture(GL_TEXTURE3);
+	glBindTexture(GL_TEXTURE_2D, bumpMap1);
+
+	glUniform1i(glGetUniformLocation(shader->GetProgram(), "diffuseTex2"), 4);
+	glActiveTexture(GL_TEXTURE4);
+	glBindTexture(GL_TEXTURE_2D, texture2);
+
+	glUniform1i(glGetUniformLocation(shader->GetProgram(), "bumpTex2"), 5);
+	glActiveTexture(GL_TEXTURE5);
+	glBindTexture(GL_TEXTURE_2D, bumpMap2);
+
+	glUniform1i(glGetUniformLocation(shader->GetProgram(), "splatMap"), 6);
+	glActiveTexture(GL_TEXTURE6);
+	glBindTexture(GL_TEXTURE_2D, splatMap);
 
 	//glUniform3fv(glGetUniformLocation(shader->GetProgram(), "cameraPos"), 1, (float*)&camera->GetPosition());
 	//SetShaderLight(*light);
+	glUniform3fv(glGetUniformLocation(shader->GetProgram(), "lightDir"),1, (float*)&lightDir);
+	glUniform4fv(glGetUniformLocation(shader->GetProgram(), "diffuseColour"),1, (float*)&lightDiffuse);
+	glUniform4fv(glGetUniformLocation(shader->GetProgram(), "specularColour"),1, (float*)&lightSpecular);
 	heightMap->Draw();
 
 	
@@ -828,11 +866,12 @@ void Renderer::ImGui() {
 		ImGui::TreePop();
 	}
 	if (ImGui::TreeNode("Light")) {
-		ImGui::SliderFloat3("Position", (float*)&light->position, 0, 10000);
-		ImGui::SliderFloat("Radius", &light->radius, 0, 10000);
-		ImGui::SliderFloat("Intensity", &light->intensity, 0, 10);
-		ImGui::ColorEdit4("Diffuse Colour", (float*)&light->diffuseColour);
-		ImGui::ColorEdit4("Specular Colour", (float*)&light->specularColour);
+		//ImGui::SliderFloat3("Position", (float*)&light->position, 0, 10000);
+		//ImGui::SliderFloat("Radius", &light->radius, 0, 10000);
+		//ImGui::SliderFloat("Intensity", &light->intensity, 0, 10);
+		ImGui::ColorEdit4("Diffuse Colour", (float*)&lightDiffuse);
+		ImGui::ColorEdit4("Specular Colour", (float*)&lightSpecular);
+		ImGui::SliderFloat3("Direction", (float*)&lightDir,-1,1);
 		ImGui::TreePop();
 	}
 	if (ImGui::TreeNode("Portal")) {
@@ -999,12 +1038,33 @@ void Renderer::RenderPortal() {
 	DrawSkybox();
 	BindShader(shader);
 	glBindBuffer(GL_UNIFORM_BUFFER, matrixUBO);
-	glUniform1i(glGetUniformLocation(shader->GetProgram(), "diffuseTex"), 0);
+	glUniform1i(glGetUniformLocation(shader->GetProgram(), "diffuseTex0"), 0);
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, texture);
-	glUniform1i(glGetUniformLocation(shader->GetProgram(), "bumpTex"), 1);
+	glBindTexture(GL_TEXTURE_2D, texture0);
+
+	glUniform1i(glGetUniformLocation(shader->GetProgram(), "bumpTex0"), 1);
 	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, bumpMap);
+	glBindTexture(GL_TEXTURE_2D, bumpMap0);
+
+	glUniform1i(glGetUniformLocation(shader->GetProgram(), "diffuseTex1"), 2);
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, texture1);
+
+	glUniform1i(glGetUniformLocation(shader->GetProgram(), "bumpTex1"), 3);
+	glActiveTexture(GL_TEXTURE3);
+	glBindTexture(GL_TEXTURE_2D, bumpMap1);
+
+	glUniform1i(glGetUniformLocation(shader->GetProgram(), "diffuseTex2"), 4);
+	glActiveTexture(GL_TEXTURE4);
+	glBindTexture(GL_TEXTURE_2D, texture2);
+
+	glUniform1i(glGetUniformLocation(shader->GetProgram(), "bumpTex2"), 5);
+	glActiveTexture(GL_TEXTURE5);
+	glBindTexture(GL_TEXTURE_2D, bumpMap2);
+
+	glUniform1i(glGetUniformLocation(shader->GetProgram(), "splatMap"), 6);
+	glActiveTexture(GL_TEXTURE6);
+	glBindTexture(GL_TEXTURE_2D, splatMap);
 
 	glUniform3fv(glGetUniformLocation(shader->GetProgram(), "cameraPos"), 1, (float*)&camera->GetPosition());
 	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(Matrix4), &(modelMatrix.values));
@@ -1048,9 +1108,33 @@ void Renderer::RenderReflection() {
 	DrawSkybox();
 	BindShader(shader);
 	glBindBuffer(GL_UNIFORM_BUFFER, matrixUBO);
-	glUniform1i(glGetUniformLocation(shader->GetProgram(), "diffuseTex"), 0);
+	glUniform1i(glGetUniformLocation(shader->GetProgram(), "diffuseTex0"), 0);
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, texture);
+	glBindTexture(GL_TEXTURE_2D, texture0);
+
+	glUniform1i(glGetUniformLocation(shader->GetProgram(), "bumpTex0"), 1);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, bumpMap0);
+
+	glUniform1i(glGetUniformLocation(shader->GetProgram(), "diffuseTex1"), 2);
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, texture1);
+
+	glUniform1i(glGetUniformLocation(shader->GetProgram(), "bumpTex1"), 3);
+	glActiveTexture(GL_TEXTURE3);
+	glBindTexture(GL_TEXTURE_2D, bumpMap1);
+
+	glUniform1i(glGetUniformLocation(shader->GetProgram(), "diffuseTex2"), 4);
+	glActiveTexture(GL_TEXTURE4);
+	glBindTexture(GL_TEXTURE_2D, texture2);
+
+	glUniform1i(glGetUniformLocation(shader->GetProgram(), "bumpTex2"), 5);
+	glActiveTexture(GL_TEXTURE5);
+	glBindTexture(GL_TEXTURE_2D, bumpMap2);
+
+	glUniform1i(glGetUniformLocation(shader->GetProgram(), "splatMap"), 6);
+	glActiveTexture(GL_TEXTURE6);
+	glBindTexture(GL_TEXTURE_2D, splatMap);
 	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(Matrix4), &(modelMatrix.values));
 	glBufferSubData(GL_UNIFORM_BUFFER, sizeof(Matrix4), sizeof(Matrix4), &(viewMatrix.values));
 	
@@ -1059,8 +1143,34 @@ void Renderer::RenderReflection() {
 	//RenderSpiders();
 	if(reflectGrass)RenderGrass();
 	if(reflectParticles)RenderParticles();
+	BindShader(shader);
+	glUniform1i(glGetUniformLocation(shader->GetProgram(), "diffuseTex0"), 0);
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, texture);
+	glBindTexture(GL_TEXTURE_2D, texture0);
+
+	glUniform1i(glGetUniformLocation(shader->GetProgram(), "bumpTex0"), 1);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, bumpMap0);
+
+	glUniform1i(glGetUniformLocation(shader->GetProgram(), "diffuseTex1"), 2);
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, texture1);
+
+	glUniform1i(glGetUniformLocation(shader->GetProgram(), "bumpTex1"), 3);
+	glActiveTexture(GL_TEXTURE3);
+	glBindTexture(GL_TEXTURE_2D, bumpMap1);
+
+	glUniform1i(glGetUniformLocation(shader->GetProgram(), "diffuseTex2"), 4);
+	glActiveTexture(GL_TEXTURE4);
+	glBindTexture(GL_TEXTURE_2D, texture2);
+
+	glUniform1i(glGetUniformLocation(shader->GetProgram(), "bumpTex2"), 5);
+	glActiveTexture(GL_TEXTURE5);
+	glBindTexture(GL_TEXTURE_2D, bumpMap2);
+
+	glUniform1i(glGetUniformLocation(shader->GetProgram(), "splatMap"), 6);
+	glActiveTexture(GL_TEXTURE6);
+	glBindTexture(GL_TEXTURE_2D, splatMap);
 	BindShader(shader);
 	camera->GoUnderwater(waterHeight);
 	viewMatrix = camera->BuildViewMatrix();
