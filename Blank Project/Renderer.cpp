@@ -283,10 +283,10 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	reflectGrass = true;
 	reflectParticles = true;
 	
-	guiShader = new Shader("texturedVertex.glsl", "texturedFragment.glsl");
-	glUniformBlockBinding(guiShader->GetProgram(), glGetUniformBlockIndex(guiShader->GetProgram(), "matrices"), 0);
+	waterShader = new Shader("waterVertex.glsl", "waterFragment.glsl");
+	glUniformBlockBinding(waterShader->GetProgram(), glGetUniformBlockIndex(waterShader->GetProgram(), "matrices"), 0);
 	blendFactor = 0.5;
-	if (!guiShader->LoadSuccess()) {
+	if (!waterShader->LoadSuccess()) {
 		return;
 	}
 
@@ -1258,23 +1258,23 @@ void Renderer::RenderReflection() {
 	glUniform1i(glGetUniformLocation(shader->GetProgram(), "clipHeight"), -99999);
 	glUniform1i(glGetUniformLocation(shader->GetProgram(), "clipping"), 0);
 	glBindFramebuffer(GL_FRAMEBUFFER, bufferFBO);
-	BindShader(guiShader);
+	BindShader(waterShader);
 	//SetShaderLight(*light);
-	glUniform1f(glGetUniformLocation(guiShader->GetProgram(), "blendFactor"), blendFactor);
+	glUniform1f(glGetUniformLocation(waterShader->GetProgram(), "blendFactor"), blendFactor);
 	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(Matrix4), &(waterQuad->modelMatrix.values));
-	glUniform1i(glGetUniformLocation(guiShader->GetProgram(), "reflectTex"), 0);
+	glUniform1i(glGetUniformLocation(waterShader->GetProgram(), "reflectTex"), 0);
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, reflectionColour);
-	glUniform1i(glGetUniformLocation(guiShader->GetProgram(), "refractTex"), 1);
+	glUniform1i(glGetUniformLocation(waterShader->GetProgram(), "refractTex"), 1);
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, refractionColour);
-	glUniform1i(glGetUniformLocation(guiShader->GetProgram(), "waterTex"), 2);
+	glUniform1i(glGetUniformLocation(waterShader->GetProgram(), "waterTex"), 2);
 	glActiveTexture(GL_TEXTURE2);
 	glBindTexture(GL_TEXTURE_2D, waterTex);
-	glUniform1i(glGetUniformLocation(guiShader->GetProgram(), "waterNormal"), 3);
+	glUniform1i(glGetUniformLocation(waterShader->GetProgram(), "waterNormal"), 3);
 	glActiveTexture(GL_TEXTURE3);
 	glBindTexture(GL_TEXTURE_2D, waterNormal);
-	glUniform1f(glGetUniformLocation(guiShader->GetProgram(), "time"), timePassed);
+	glUniform1f(glGetUniformLocation(waterShader->GetProgram(), "time"), timePassed);
 	waterQuad->Draw();
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }

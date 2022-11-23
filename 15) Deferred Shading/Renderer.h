@@ -115,7 +115,7 @@ protected:
     GLuint refractionDepthTex;
 
     Mesh* guiMapQuad;
-    Shader* guiShader;
+    Shader* waterShader;
     Mesh* waterQuad;
     float blendFactor;
     int waterHeight;
