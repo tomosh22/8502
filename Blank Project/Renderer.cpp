@@ -396,6 +396,9 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	camera->pitch = cameraStates[0].pitch;
 	camera->yaw = cameraStates[0].yaw;
 
+
+	correctAtten = false;
+
 	init = true;
 }
 
@@ -460,6 +463,7 @@ void Renderer::GenerateScreenTexture(GLuint& into, bool depth) {
 void Renderer::DrawPointLights() {
 	glBindFramebuffer(GL_FRAMEBUFFER, pointLightFBO);
 	BindShader(pointLightShader);
+	glUniform1i(glGetUniformLocation(pointLightShader->GetProgram(), "correctAtten"), correctAtten);
 	glClearColor(0, 0, 0, 1);
 	glClear(GL_COLOR_BUFFER_BIT);
 	glBlendFunc(GL_ONE, GL_ONE);
@@ -914,6 +918,7 @@ void Renderer::ImGui() {
 	ImGui::SliderFloat("Camera Pitch", (float*)&(camera->pitch), -90, 90);
 	ImGui::ColorEdit4("Fog Colour", (float*)&fogColour);
 	ImGui::Checkbox("Draw Normals as Colours", &drawNormals);
+	ImGui::Checkbox("Physcially Correct Attenuation", &correctAtten);
 	if (ImGui::TreeNode("Particles")) {
 		ImGui::Text(("Particle Count: " + std::to_string(particleIndex)).c_str());
 		ImGui::SliderFloat("Lifetime", &particleLifetime, 0, 10);

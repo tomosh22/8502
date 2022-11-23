@@ -210,5 +210,7 @@ protected:
 	float cameraTime;
 	CameraState* startState;
 	CameraState* endState;
+
+	bool correctAtten;
 };
 

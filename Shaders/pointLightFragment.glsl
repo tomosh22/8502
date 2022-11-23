@@ -11,6 +11,8 @@ uniform float lightRadius;
  uniform vec4 lightColour;
  uniform mat4 inverseProjView;
 
+ uniform bool correctAtten;
+
  out vec4 diffuseOutput;
  out vec4 specularOutput;
 
@@ -21,10 +23,17 @@ uniform float lightRadius;
  vec3 ndcPos = vec3(texCoord , depth) * 2.0 - 1.0;
  vec4 invClipPos = inverseProjView * vec4(ndcPos , 1.0);
  vec3 worldPos = invClipPos.xyz / invClipPos.w;
-
+ 
  float dist = length(lightPos - worldPos );
- float atten = 1.0 - clamp(dist / lightRadius , 0.0, 1.0);
- //dist = dist / 1000; atten = 1/(dist*dist);
+ float atten;
+ if(correctAtten){
+	 dist = dist / 1000; atten = 1/(dist*dist);
+ }
+ else{
+	 atten = 1.0 - clamp(dist / lightRadius , 0.0, 1.0);
+ }
+
+ 
  if(atten == 0.0) {
  discard;
  }
