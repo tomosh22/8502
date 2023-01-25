@@ -173,7 +173,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 				0.5 + (float)(rand() / (float)RAND_MAX),
 				0.5 + (float)(rand() / (float)RAND_MAX), 1
 			));
-			l.SetRadius(5000 + rand() % 250);
+			l.SetRadius(1000 + rand() % 250);
 			//l.SetRadius(0);
 			l.intensity = 1;
 			l.angle = 0;
@@ -242,7 +242,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
 	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 	glEnable(GL_CLIP_DISTANCE0);
 	
 	glGenBuffers(1, &matrixUBO);
@@ -609,7 +609,7 @@ void Renderer::CameraRoutine(float dt, CameraState deltaState, float time) {
 
 
 void Renderer::UpdateScene(float dt) {
-
+	freeCam = true;
 	if (!freeCam) {
 		CameraState startState = cameraStates[currentCheckpoint];
 		CameraState endState = cameraStates[currentCheckpoint+1];
